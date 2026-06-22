@@ -22,7 +22,7 @@ export function PagesLayout({
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-20 border-b bg-background/80 backdrop-blur">
+      <header className="sticky top-0 z-20 border-b bg-background/70 backdrop-blur-md">
         <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3">
           <span className="font-semibold tracking-tight">{name || "OpenVitae"}</span>
           <nav className="flex flex-1 flex-wrap items-center gap-1">
@@ -32,10 +32,10 @@ export function PagesLayout({
                 type="button"
                 onClick={() => setActive(s.value)}
                 className={cn(
-                  "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                  "px-3 py-1.5 text-sm font-medium transition-colors",
                   active === s.value
-                    ? "bg-accent text-foreground"
-                    : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 {s.label}
@@ -46,9 +46,9 @@ export function PagesLayout({
         </div>
       </header>
 
-      <main className="mx-auto max-w-2xl px-5 pb-24 pt-10">
+      <main className="mx-auto max-w-2xl px-5 pb-24 pt-14">
         {hero}
-        <div className="mt-10">{current?.content}</div>
+        <div className="mt-14">{current?.content}</div>
         <SiteFooter />
       </main>
     </div>

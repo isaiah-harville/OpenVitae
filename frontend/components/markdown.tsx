@@ -33,7 +33,7 @@ const schema = {
 export function Markdown({ children, className }: { children: string; className?: string }) {
   return (
     <div
-      className={`prose prose-sm max-w-none dark:prose-invert [&_img]:my-1 [&_img]:inline-block ${className ?? ""}`}
+      className={`prose prose-sm max-w-none dark:prose-invert prose-headings:tracking-tight prose-a:font-medium prose-a:text-primary prose-a:no-underline hover:prose-a:underline [&_img]:my-1 [&_img]:inline-block ${className ?? ""}`}
     >
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}

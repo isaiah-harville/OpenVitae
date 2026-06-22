@@ -10,7 +10,7 @@ export function ProjectsList({ projects }: { projects: Project[] }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       {projects.map((project) => (
-        <Card key={project.id}>
+        <Card key={project.id} className="surface-card">
           <CardContent className="space-y-2">
             <h3 className="font-semibold leading-snug">{project.name}</h3>
             {project.description && (

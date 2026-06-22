@@ -8,7 +8,7 @@ export function TalksList({ talks }: { talks: Talk[] }) {
   return (
     <div className="space-y-3">
       {talks.map((talk) => (
-        <Card key={talk.id}>
+        <Card key={talk.id} className="surface-card">
           <CardContent className="space-y-1">
             <h3 className="font-semibold leading-snug">{talk.title}</h3>
             <p className="text-sm text-muted-foreground">

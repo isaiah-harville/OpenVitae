@@ -6,7 +6,7 @@ import type { Publication } from "@/lib/api";
 
 export function PublicationCard({ pub }: { pub: Publication }) {
   return (
-    <Card className="transition-shadow hover:shadow-md">
+    <Card className="surface-card">
       <CardContent className="space-y-2">
         <h3 className="flex items-start gap-1.5 font-semibold leading-snug">
           {pub.featured && <Star className="mt-1 size-3.5 shrink-0 fill-primary text-primary" />}

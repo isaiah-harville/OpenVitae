@@ -109,14 +109,16 @@ export default async function Home() {
   return (
     <div className="min-h-screen">
       <SiteHeader name={profile.name} />
-      <main className="mx-auto max-w-2xl px-5 pb-24 pt-10">
+      <main className="mx-auto max-w-2xl px-5 pb-24 pt-14">
         {hero}
-        {sections.map((s) => (
-          <section key={s.value} className="mt-12">
-            <SectionHeading>{s.label}</SectionHeading>
-            {s.content}
-          </section>
-        ))}
+        <div className="mt-16 space-y-16">
+          {sections.map((s) => (
+            <section key={s.value}>
+              <SectionHeading>{s.label}</SectionHeading>
+              {s.content}
+            </section>
+          ))}
+        </div>
         <SiteFooter />
       </main>
     </div>

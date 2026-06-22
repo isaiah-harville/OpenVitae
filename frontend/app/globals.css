@@ -165,3 +165,11 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+  /* One restrained card treatment shared by publications, talks, and projects:
+     a quiet border that warms toward the foreground on hover. */
+  .surface-card {
+    @apply transition-colors hover:border-foreground/20;
+  }
+}
