@@ -64,6 +64,8 @@ All config is via environment variables — see [.env.example](.env.example). Ke
 - 🖼️ Upload a headshot.
 - 🎨 Change the site color palette (and font) live.
 - 📚 Manage publications: title, authors, venue, year, abstract, DOI, URL, PDF upload.
+- 📥 Import publications from a **BibTeX** file, an **ORCID** record, or a single **DOI**
+  (metadata via Crossref; author lists filled in by DOI). Duplicates are skipped.
 - 🏷️ Tag publications and filter by tag.
 - 🎚️ Toggle site features (about / publications / contact / headshot sections).
 
@@ -72,6 +74,22 @@ All config is via environment variables — see [.env.example](.env.example). Ke
 Tracked in [GitHub issues](../../issues). Highlights: Helm chart for Kubernetes,
 database migrations (Alembic), pluggable OIDC/Keycloak auth, automated tests & CI.
 
+
+## Kubernetes (Helm)
+
+A Helm chart lives in [`helm/openvitae`](helm/openvitae). It deploys the api and
+frontend plus an optional in-cluster Postgres and MinIO (StatefulSets with PVCs, so
+data survives restarts and upgrades), with ingress and external-DB/S3 support.
+
+```sh
+helm install openvitae ./helm/openvitae \
+  --namespace openvitae --create-namespace \
+  --set auth.jwtSecret=$(openssl rand -hex 32) \
+  --set global.storageClass=longhorn   # optional; omit for the cluster default
+```
+
+See the [chart README](helm/openvitae/README.md) for ingress, the object-storage
+URL gotcha, Longhorn notes, and data-persistence details.
 
 ## Local development (without Docker)
 

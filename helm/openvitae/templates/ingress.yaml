@@ -1,0 +1,50 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "openvitae.fullname" . }}
+  labels:
+    {{- include "openvitae.labels" . | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.ingress.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- if .Values.ingress.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ .Values.ingress.host | quote }}
+        {{- with .Values.ingress.s3Host }}
+        - {{ . | quote }}
+        {{- end }}
+      secretName: {{ .Values.ingress.tls.secretName }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "openvitae.frontend.fullname" . }}
+                port:
+                  number: {{ .Values.frontend.service.port }}
+    {{- if and .Values.ingress.s3Host .Values.minio.enabled }}
+    # Object storage on its own host so presigned headshot/PDF URLs resolve
+    # from the visitor's browser. Point publicS3Url / S3_PUBLIC_ENDPOINT_URL here.
+    - host: {{ .Values.ingress.s3Host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "openvitae.minio.fullname" . }}
+                port:
+                  number: 9000
+    {{- end }}
+{{- end }}

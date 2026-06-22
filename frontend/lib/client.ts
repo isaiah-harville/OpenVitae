@@ -109,6 +109,11 @@ export const api = {
     req<{ headshot_url: string }>(`/api/import/github/${encodeURIComponent(username)}/headshot`, {
       method: "POST",
     }),
+
+  importBibtex: (bibtex: string) => jsonReq<ImportResult>("/api/import/bibtex", "POST", { bibtex }),
+  importOrcid: (orcid: string, enrich = true) =>
+    jsonReq<ImportResult>("/api/import/orcid", "POST", { orcid, enrich }),
+  importDoi: (doi: string) => jsonReq<ImportResult>("/api/import/doi", "POST", { doi }),
 };
 
 export type GithubImportResult = {
@@ -118,4 +123,10 @@ export type GithubImportResult = {
   links: { label: string; url: string }[];
   socials: { platform: string; url: string }[];
   avatar_url?: string | null;
+};
+
+export type ImportResult = {
+  created: number;
+  skipped: number;
+  titles: string[];
 };

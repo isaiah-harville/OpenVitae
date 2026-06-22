@@ -1,0 +1,16 @@
+apiVersion: v2
+name: openvitae
+description: Config-driven CV website and publication manager (api + frontend + Postgres + MinIO)
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+home: https://github.com/isaiah-harville/OpenVitae
+sources:
+  - https://github.com/isaiah-harville/OpenVitae
+keywords:
+  - cv
+  - publications
+  - fastapi
+  - nextjs
+maintainers:
+  - name: Isaiah Harville

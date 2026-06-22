@@ -1,0 +1,47 @@
+name: Publish Helm chart
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  chart:
+    name: Package & push chart
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.16.4
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      # On a v* tag, stamp the chart + appVersion with the release version
+      # (v1.2.3 -> 1.2.3); on manual runs, use whatever Chart.yaml declares.
+      - name: Resolve version
+        id: ver
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Package
+        run: |
+          args=""
+          if [ -n "${{ steps.ver.outputs.version }}" ]; then
+            args="--version ${{ steps.ver.outputs.version }} --app-version ${{ steps.ver.outputs.version }}"
+          fi
+          helm package helm/openvitae $args --destination dist
+
+      - name: Push to GHCR (OCI)
+        run: helm push dist/openvitae-*.tgz oci://ghcr.io/${{ github.repository_owner }}/charts
