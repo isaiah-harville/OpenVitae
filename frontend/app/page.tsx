@@ -126,7 +126,17 @@ export default async function Home() {
 
         <Separator className="mt-16" />
         <footer className="mt-6 flex items-center justify-between text-xs text-muted-foreground">
-          <span>Powered by OpenVitae</span>
+          <span>
+            Powered by{" "}
+            <a
+              href="https://github.com/isaiah-harville/OpenVitae"
+              target="_blank"
+              rel="noreferrer"
+              className="underline hover:text-foreground"
+            >
+              OpenVitae
+            </a>
+          </span>
           <Link href="/admin" className="hover:text-foreground">
             Admin
           </Link>
