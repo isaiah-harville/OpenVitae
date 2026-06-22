@@ -102,4 +102,20 @@ export const api = {
     fd.append("file", file);
     return req<{ status: string }>("/api/restore", { method: "POST", body: fd });
   },
+
+  importGithub: (username: string) =>
+    req<GithubImportResult>(`/api/import/github/${encodeURIComponent(username)}`),
+  importGithubHeadshot: (username: string) =>
+    req<{ headshot_url: string }>(`/api/import/github/${encodeURIComponent(username)}/headshot`, {
+      method: "POST",
+    }),
+};
+
+export type GithubImportResult = {
+  name?: string | null;
+  bio?: string | null;
+  location?: string | null;
+  links: { label: string; url: string }[];
+  socials: { platform: string; url: string }[];
+  avatar_url?: string | null;
 };

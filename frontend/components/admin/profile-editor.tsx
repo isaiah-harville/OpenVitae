@@ -4,6 +4,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Field } from "@/components/admin/field";
+import { GithubImport } from "@/components/admin/github-import";
 import type { EditorProps } from "@/components/admin/types";
 import { SocialIcon } from "@/components/social-icon";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { api } from "@/lib/client";
+import { api, type GithubImportResult } from "@/lib/client";
 import { SOCIAL_PLATFORMS } from "@/lib/socials";
 
 export function ProfileEditor({ config, setConfig }: EditorProps) {
@@ -40,6 +41,27 @@ export function ProfileEditor({ config, setConfig }: EditorProps) {
     }
   }
 
+  function mergeGithub(r: GithubImportResult) {
+    setP((prev) => {
+      const links = [...(prev.links || [])];
+      for (const l of r.links) {
+        if (!links.some((x) => x.url === l.url)) links.push(l);
+      }
+      const socials = [...(prev.socials || [])];
+      for (const s of r.socials) {
+        if (!socials.some((x) => x.platform === s.platform)) socials.push(s);
+      }
+      return {
+        ...prev,
+        name: r.name || prev.name || "",
+        bio: r.bio || prev.bio || "",
+        location: r.location || prev.location || "",
+        links,
+        socials,
+      };
+    });
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -47,6 +69,10 @@ export function ProfileEditor({ config, setConfig }: EditorProps) {
         <CardDescription>Your name, title, and contact details.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <GithubImport
+          onProfile={mergeGithub}
+          onHeadshot={(url) => setConfig({ ...config, headshot_url: url })}
+        />
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Name">
             <Input value={p.name || ""} onChange={(e) => setP({ ...p, name: e.target.value })} />
@@ -70,6 +96,7 @@ export function ProfileEditor({ config, setConfig }: EditorProps) {
             value={p.bio || ""}
             onChange={(e) => setP({ ...p, bio: e.target.value })}
           />
+          <p className="text-sm text-muted-foreground">Markdown supported.</p>
         </Field>
 
         <div className="space-y-2">
