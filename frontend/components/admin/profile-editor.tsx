@@ -97,6 +97,7 @@ export function ProfileEditor({ config, setConfig }: EditorProps) {
             rows={4}
             value={p.bio || ""}
             onChange={(e) => setP({ ...p, bio: e.target.value })}
+            className="max-h-[60vh] resize-y field-sizing-fixed"
           />
           <p className="text-sm text-muted-foreground">Markdown supported.</p>
         </Field>
