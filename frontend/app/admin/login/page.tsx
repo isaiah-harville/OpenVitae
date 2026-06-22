@@ -34,10 +34,14 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="admin">
-      <h1>OpenVitae Admin</h1>
-      <form className="card" onSubmit={onSubmit}>
-        <label htmlFor="email">Email</label>
+    <div className="login-wrap">
+      <div className="login-card">
+        <h1 style={{ marginBottom: "0.25rem" }}>OpenVitae Admin</h1>
+        <p className="muted" style={{ marginTop: 0 }}>
+          Sign in to manage your site.
+        </p>
+        <form className="card" onSubmit={onSubmit}>
+          <label htmlFor="email">Email</label>
         <input
           id="email"
           type="email"
@@ -58,8 +62,9 @@ export default function LoginPage() {
           <button type="submit" disabled={loading}>
             {loading ? "Signing in…" : "Sign in"}
           </button>
-        </div>
-      </form>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

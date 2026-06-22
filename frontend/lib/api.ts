@@ -3,8 +3,7 @@
 //  - NEXT_PUBLIC_API_URL: used in the browser (client components).
 export const SERVER_API_URL =
   process.env.SERVER_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-export const PUBLIC_API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+export const PUBLIC_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export type Tag = { id: number; name: string; slug: string };
 

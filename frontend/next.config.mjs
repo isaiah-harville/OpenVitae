@@ -4,7 +4,10 @@ const nextConfig = {
   reactStrictMode: true,
   images: {
     // Headshots are served via presigned URLs from MinIO; allow remote images.
-    remotePatterns: [{ protocol: "http", hostname: "**" }, { protocol: "https", hostname: "**" }],
+    remotePatterns: [
+      { protocol: "http", hostname: "**" },
+      { protocol: "https", hostname: "**" },
+    ],
   },
 };
 

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { api, isAuthed, logout } from "@/lib/client";
 import type { Publication, SiteConfig, Tag } from "@/lib/api";
+import { PALETTES, matchPaletteId } from "@/lib/palettes";
 
 const THEME_COLORS: { key: string; label: string }[] = [
   { key: "primary", label: "Primary" },
@@ -190,34 +191,90 @@ function HeadshotEditor({ config, setConfig, onSave }: EditorProps) {
 
 function ThemeEditor({ config, setConfig, onSave }: EditorProps) {
   const [theme, setTheme] = useState<Record<string, string>>(config.theme || {});
+  const [advanced, setAdvanced] = useState(matchPaletteId(config.theme || {}) === null);
+  const selectedId = matchPaletteId(theme);
+
+  function applyPalette(id: string) {
+    const p = PALETTES.find((x) => x.id === id);
+    if (!p) return;
+    setTheme({
+      primary: p.theme.primary,
+      secondary: p.theme.secondary,
+      accent: p.theme.accent,
+      background: p.theme.background,
+      text: p.theme.text,
+      font: theme.font || p.theme.font || "",
+    });
+  }
 
   async function save() {
     const updated = await api.updateConfig({ theme });
     setConfig(updated);
-    onSave("Theme saved (reload the public site to see it)");
+    onSave("Theme saved — reload the public site to see it");
   }
 
   return (
     <section className="card">
       <h2>Color palette</h2>
-      {THEME_COLORS.map(({ key, label }) => (
-        <div className="row" key={key} style={{ marginBottom: "0.4rem" }}>
-          <label style={{ margin: 0, width: 120 }}>{label}</label>
+      <p className="muted">Pick a palette, or switch to Advanced to tune every color.</p>
+
+      <div className="swatches">
+        {PALETTES.map((p) => (
+          <button
+            type="button"
+            key={p.id}
+            className={`swatch ${selectedId === p.id ? "swatch--active" : ""}`}
+            onClick={() => applyPalette(p.id)}
+            title={p.name}
+          >
+            <span className="swatch__chips" style={{ background: p.theme.background }}>
+              <span style={{ background: p.theme.primary }} />
+              <span style={{ background: p.theme.accent }} />
+              <span style={{ background: p.theme.secondary }} />
+            </span>
+            <span className="swatch__name">{p.name}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="toggle" style={{ marginTop: "1rem" }}>
+        <input
+          type="checkbox"
+          id="advanced-theme"
+          checked={advanced}
+          onChange={(e) => setAdvanced(e.target.checked)}
+        />
+        <label htmlFor="advanced-theme" style={{ margin: 0 }}>
+          Advanced (manual colors)
+        </label>
+      </div>
+
+      {advanced && (
+        <div style={{ marginTop: "0.75rem" }}>
+          {THEME_COLORS.map(({ key, label }) => (
+            <div className="row" key={key} style={{ marginBottom: "0.4rem" }}>
+              <label style={{ margin: 0, width: 120 }}>{label}</label>
+              <input
+                type="color"
+                style={{ width: 48, padding: 2, height: 38 }}
+                value={theme[key] || "#000000"}
+                onChange={(e) => setTheme({ ...theme, [key]: e.target.value })}
+              />
+              <input
+                style={{ width: 130 }}
+                value={theme[key] || ""}
+                onChange={(e) => setTheme({ ...theme, [key]: e.target.value })}
+              />
+            </div>
+          ))}
+          <label>Font family</label>
           <input
-            type="color"
-            style={{ width: 60, padding: 2 }}
-            value={theme[key] || "#000000"}
-            onChange={(e) => setTheme({ ...theme, [key]: e.target.value })}
-          />
-          <input
-            style={{ width: 120 }}
-            value={theme[key] || ""}
-            onChange={(e) => setTheme({ ...theme, [key]: e.target.value })}
+            value={theme.font || ""}
+            onChange={(e) => setTheme({ ...theme, font: e.target.value })}
           />
         </div>
-      ))}
-      <label>Font family</label>
-      <input value={theme.font || ""} onChange={(e) => setTheme({ ...theme, font: e.target.value })} />
+      )}
+
       <div style={{ marginTop: "1rem" }}>
         <button onClick={save}>Save palette</button>
       </div>
