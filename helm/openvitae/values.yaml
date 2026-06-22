@@ -1,0 +1,157 @@
+# Default values for the OpenVitae chart.
+
+global:
+  # Storage class applied to every PersistentVolumeClaim unless a component
+  # overrides it below. Set to "longhorn" to provision all data on Longhorn.
+  # Leave empty to use the cluster's default StorageClass.
+  storageClass: ""
+
+nameOverride: ""
+fullnameOverride: ""
+
+# Browser-reachable base URL for object storage (presigned headshot/PDF links
+# are opened directly by the visitor's browser, NOT proxied through the app).
+# REQUIRED in any real deployment — e.g. the MinIO ingress host, or your S3/CDN
+# URL. If left empty it falls back to the in-cluster endpoint, which only works
+# from inside the cluster.
+publicS3Url: ""
+
+api:
+  image:
+    repository: ghcr.io/isaiah-harville/openvitae/api
+    # Defaults to the chart appVersion when empty. Use "latest" to track main.
+    tag: ""
+    pullPolicy: IfNotPresent
+  replicas: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+  service:
+    type: ClusterIP
+    port: 8000
+  podSecurityContext: {}
+  securityContext: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+frontend:
+  image:
+    repository: ghcr.io/isaiah-harville/openvitae/frontend
+    tag: ""
+    pullPolicy: IfNotPresent
+  replicas: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+  service:
+    type: ClusterIP
+    port: 3000
+  podSecurityContext: {}
+  securityContext: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# Application auth/config. In production override these (or supply existingSecret).
+auth:
+  jwtSecret: "change-me-in-production"
+  accessTokenExpireMinutes: 1440
+  admin:
+    email: admin@openvitae.local
+    password: changeme
+
+# Bring-your-own Secret holding the sensitive env (DATABASE_URL, JWT_SECRET,
+# ADMIN_PASSWORD, S3_ACCESS_KEY, S3_SECRET_KEY). When set, the chart will not
+# render its own Secret.
+existingSecret: ""
+
+# Comma-separated CORS origins the API accepts. Defaults to the ingress host
+# (https) when an ingress host is configured.
+corsOrigins: ""
+
+# ---------------------------------------------------------------------------
+# In-cluster PostgreSQL. Disable to use an external/managed database.
+# Uses a StatefulSet with a PersistentVolumeClaim, so data survives pod
+# restarts and `helm upgrade`. Longhorn-friendly: single replica + RWO volume.
+# ---------------------------------------------------------------------------
+postgres:
+  enabled: true
+  image: postgres:17-alpine
+  auth:
+    username: openvitae
+    password: openvitae
+    database: openvitae
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+  persistence:
+    enabled: true
+    size: 8Gi
+    # Falls back to global.storageClass, then the cluster default. Set to
+    # "longhorn" here (or globally) to put the database on Longhorn.
+    storageClass: ""
+    accessModes:
+      - ReadWriteOnce
+
+externalDatabase:
+  # Required when postgres.enabled=false.
+  # postgresql+psycopg2://user:pass@host:5432/dbname
+  url: ""
+
+# ---------------------------------------------------------------------------
+# In-cluster MinIO (S3-compatible object storage). Disable to use external S3.
+# StatefulSet + PVC; single replica + RWO so it is Longhorn-friendly.
+# ---------------------------------------------------------------------------
+minio:
+  enabled: true
+  image: minio/minio:latest
+  auth:
+    rootUser: openvitae
+    rootPassword: openvitae-secret
+  bucket: openvitae
+  region: us-east-1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+  persistence:
+    enabled: true
+    size: 20Gi
+    storageClass: ""
+    accessModes:
+      - ReadWriteOnce
+
+externalS3:
+  # Used when minio.enabled=false.
+  endpointUrl: ""
+  accessKey: ""
+  secretKey: ""
+  bucket: openvitae
+  region: us-east-1
+
+# ---------------------------------------------------------------------------
+# Ingress. Routes the host to the frontend; the browser reaches the API
+# same-origin at /<host>/api (proxied by the frontend to the API service).
+# Optionally exposes MinIO on its own host so presigned URLs resolve.
+# ---------------------------------------------------------------------------
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  host: openvitae.example.com
+  tls:
+    enabled: false
+    secretName: openvitae-tls
+  # Separate host for object storage (so presigned URLs are browser-reachable).
+  # When set, the chart also points publicS3Url at https/http://<s3Host>.
+  s3Host: ""

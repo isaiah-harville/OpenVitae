@@ -75,6 +75,22 @@ Tracked in [GitHub issues](../../issues). Highlights: Helm chart for Kubernetes,
 database migrations (Alembic), pluggable OIDC/Keycloak auth, automated tests & CI.
 
 
+## Kubernetes (Helm)
+
+A Helm chart lives in [`helm/openvitae`](helm/openvitae). It deploys the api and
+frontend plus an optional in-cluster Postgres and MinIO (StatefulSets with PVCs, so
+data survives restarts and upgrades), with ingress and external-DB/S3 support.
+
+```sh
+helm install openvitae ./helm/openvitae \
+  --namespace openvitae --create-namespace \
+  --set auth.jwtSecret=$(openssl rand -hex 32) \
+  --set global.storageClass=longhorn   # optional; omit for the cluster default
+```
+
+See the [chart README](helm/openvitae/README.md) for ingress, the object-storage
+URL gotcha, Longhorn notes, and data-persistence details.
+
 ## Local development (without Docker)
 
 **Backend** (uses [uv](https://docs.astral.sh/uv/)):

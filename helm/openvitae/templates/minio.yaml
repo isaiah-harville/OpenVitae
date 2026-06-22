@@ -1,0 +1,88 @@
+{{- if .Values.minio.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "openvitae.minio.fullname" . }}
+  labels:
+    {{- include "openvitae.labels" . | nindent 4 }}
+    {{- include "openvitae.selectorLabels" (dict "ctx" . "component" "minio") | nindent 4 }}
+spec:
+  selector:
+    {{- include "openvitae.selectorLabels" (dict "ctx" . "component" "minio") | nindent 4 }}
+  ports:
+    - name: s3
+      port: 9000
+      targetPort: s3
+    - name: console
+      port: 9001
+      targetPort: console
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "openvitae.minio.fullname" . }}
+  labels:
+    {{- include "openvitae.labels" . | nindent 4 }}
+    {{- include "openvitae.selectorLabels" (dict "ctx" . "component" "minio") | nindent 4 }}
+spec:
+  serviceName: {{ include "openvitae.minio.fullname" . }}
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "openvitae.selectorLabels" (dict "ctx" . "component" "minio") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "openvitae.selectorLabels" (dict "ctx" . "component" "minio") | nindent 8 }}
+    spec:
+      containers:
+        - name: minio
+          image: {{ .Values.minio.image | quote }}
+          args: ["server", "/data", "--console-address", ":9001"]
+          env:
+            - name: MINIO_ROOT_USER
+              value: {{ .Values.minio.auth.rootUser | quote }}
+            - name: MINIO_ROOT_PASSWORD
+              value: {{ .Values.minio.auth.rootPassword | quote }}
+          ports:
+            - name: s3
+              containerPort: 9000
+            - name: console
+              containerPort: 9001
+          readinessProbe:
+            httpGet:
+              path: /minio/health/ready
+              port: s3
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /minio/health/live
+              port: s3
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.minio.resources | nindent 12 }}
+          {{- if .Values.minio.persistence.enabled }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          {{- end }}
+      {{- if not .Values.minio.persistence.enabled }}
+      volumes:
+        - name: data
+          emptyDir: {}
+      {{- end }}
+  {{- if .Values.minio.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          {{- toYaml .Values.minio.persistence.accessModes | nindent 10 }}
+        resources:
+          requests:
+            storage: {{ .Values.minio.persistence.size | quote }}
+        {{- include "openvitae.storageClass" (dict "ctx" . "sc" .Values.minio.persistence.storageClass) | nindent 8 }}
+  {{- end }}
+{{- end }}

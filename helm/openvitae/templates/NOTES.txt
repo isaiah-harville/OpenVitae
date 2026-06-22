@@ -1,0 +1,39 @@
+OpenVitae has been deployed as "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}".
+
+Components:
+  - api        ({{ include "openvitae.api.fullname" . }})
+  - frontend   ({{ include "openvitae.frontend.fullname" . }})
+{{- if .Values.postgres.enabled }}
+  - postgres   ({{ include "openvitae.postgres.fullname" . }})  [persistent: {{ .Values.postgres.persistence.enabled }}]
+{{- else }}
+  - postgres   external ({{ .Values.externalDatabase.url | default "<unset>" }})
+{{- end }}
+{{- if .Values.minio.enabled }}
+  - minio      ({{ include "openvitae.minio.fullname" . }})  [persistent: {{ .Values.minio.persistence.enabled }}]
+{{- else }}
+  - object storage: external S3 ({{ .Values.externalS3.endpointUrl | default "<unset>" }})
+{{- end }}
+
+Access:
+{{- if .Values.ingress.enabled }}
+  {{ if .Values.ingress.tls.enabled }}https{{ else }}http{{ end }}://{{ .Values.ingress.host }}/
+  Admin dashboard: .../admin   (login: {{ .Values.auth.admin.email }})
+{{- else }}
+  No ingress enabled. Port-forward to try it out:
+    kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "openvitae.frontend.fullname" . }} 3000:{{ .Values.frontend.service.port }}
+  then open http://localhost:3000
+{{- end }}
+
+{{- if and .Values.minio.enabled (not .Values.publicS3Url) (not .Values.ingress.s3Host) }}
+
+WARNING: publicS3Url is not set and no ingress.s3Host is configured. Presigned
+URLs for headshots/PDFs will use the in-cluster MinIO endpoint, which is NOT
+reachable from a browser. Set `publicS3Url` (or `ingress.s3Host`) for uploads
+to display. See the chart README.
+{{- end }}
+
+{{- if eq .Values.auth.jwtSecret "change-me-in-production" }}
+
+WARNING: auth.jwtSecret is still the default. Override it (and auth.admin.password)
+before exposing this deployment.
+{{- end }}
