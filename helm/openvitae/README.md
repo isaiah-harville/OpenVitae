@@ -7,7 +7,16 @@ so **their data survives pod restarts and `helm upgrade`.**
 
 ## Quick start
 
+Install from the OCI registry (published on `v*` tags), or from a local checkout:
+
 ```sh
+# From GHCR (OCI)
+helm install openvitae oci://ghcr.io/isaiah-harville/charts/openvitae --version 0.1.0 \
+  --namespace openvitae --create-namespace \
+  --set auth.jwtSecret=$(openssl rand -hex 32) \
+  --set auth.admin.password='a-strong-password'
+
+# Or from this repo
 helm install openvitae ./helm/openvitae \
   --namespace openvitae --create-namespace \
   --set auth.jwtSecret=$(openssl rand -hex 32) \
