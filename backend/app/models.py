@@ -19,7 +19,11 @@ from .database import Base
 publication_tags = Table(
     "publication_tags",
     Base.metadata,
-    Column("publication_id", ForeignKey("publications.id", ondelete="CASCADE"), primary_key=True),
+    Column(
+        "publication_id",
+        ForeignKey("publications.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
     Column("tag_id", ForeignKey("tags.id", ondelete="CASCADE"), primary_key=True),
 )
 

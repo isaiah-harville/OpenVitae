@@ -32,7 +32,9 @@ def list_publications(
     if tag:
         query = query.join(Publication.tags).filter(Tag.slug == tag)
     pubs = query.order_by(
-        Publication.sort_order, Publication.year.desc().nullslast(), Publication.id.desc()
+        Publication.sort_order,
+        Publication.year.desc().nullslast(),
+        Publication.id.desc(),
     ).all()
     return [_to_out(p) for p in pubs]
 
