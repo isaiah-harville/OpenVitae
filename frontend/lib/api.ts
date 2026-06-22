@@ -1,9 +1,13 @@
 // API base URLs.
-//  - SERVER_API_URL: used in React Server Components (inside Docker network).
-//  - NEXT_PUBLIC_API_URL: used in the browser (client components).
+//  - SERVER_API_URL: used in React Server Components to call the API directly over the
+//    internal network (read at request time on the server).
+//  - PUBLIC_API_URL: used in the browser. Defaults to "" (same-origin), so client calls
+//    hit /api/* and are proxied at runtime by app/api/[...path]/route.ts. This is why the
+//    prebuilt frontend image needs no baked API URL. Set NEXT_PUBLIC_API_URL
+//    only to bypass the proxy and call an absolute API origin directly.
 export const SERVER_API_URL =
   process.env.SERVER_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-export const PUBLIC_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+export const PUBLIC_API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
 export type Tag = { id: number; name: string; slug: string };
 

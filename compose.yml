@@ -63,13 +63,11 @@ services:
   frontend:
     build:
       context: ./frontend
-      args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     restart: unless-stopped
     depends_on:
       - api
     environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+      # SSR calls the API directly; browser calls /api are proxied here at runtime.
       SERVER_API_URL: ${SERVER_API_URL:-http://api:8000}
     ports:
       - "3000:3000"

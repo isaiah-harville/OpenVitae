@@ -43,5 +43,3 @@ jobs:
         run: bunx biome ci .
       - name: Build
         run: bun run build
-        env:
-          NEXT_PUBLIC_API_URL: http://localhost:8000
