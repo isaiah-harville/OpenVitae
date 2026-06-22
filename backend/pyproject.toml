@@ -17,6 +17,7 @@ dependencies = [
     "python-multipart>=0.0.20",
     "boto3>=1.35.92",
     "alembic>=1.18.4",
+    "bibtexparser>=1.4.4",
 ]
 
 [dependency-groups]

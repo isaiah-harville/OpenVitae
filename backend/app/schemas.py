@@ -97,6 +97,28 @@ class PublicationOut(PublicationBase):
     file_url: str | None = None
 
 
+# ---- Publication import ----
+class BibtexImportRequest(BaseModel):
+    bibtex: str
+
+
+class OrcidImportRequest(BaseModel):
+    orcid: str
+    enrich: bool = True
+
+
+class DoiImportRequest(BaseModel):
+    doi: str
+
+
+class ImportResult(BaseModel):
+    """Outcome of a bulk publication import."""
+
+    created: int
+    skipped: int
+    titles: list[str] = []
+
+
 # ---- Talks ----
 class TalkBase(BaseModel):
     title: str

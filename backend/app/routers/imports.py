@@ -7,11 +7,93 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models import SiteConfig, User
+from ..models import Publication, SiteConfig, User
+from ..pub_import import ParsedPub, fetch_doi, fetch_orcid_works, parse_bibtex
+from ..schemas import BibtexImportRequest, DoiImportRequest, ImportResult, OrcidImportRequest
 from ..security import get_current_user
 from ..storage import delete_object, presigned_url, upload_fileobj
 
 router = APIRouter(prefix="/api/import", tags=["import"])
+
+
+def _norm_title(title: str) -> str:
+    return " ".join(title.lower().split())
+
+
+def _persist_pubs(db: Session, parsed: list[ParsedPub]) -> ImportResult:
+    """Create publications from parsed dicts, skipping ones that already exist
+    (matched by DOI or normalized title, including duplicates within the batch)."""
+    existing = db.query(Publication.title, Publication.doi).all()
+    seen_dois = {p.doi.lower() for p in existing if p.doi}
+    seen_titles = {_norm_title(p.title) for p in existing if p.title}
+
+    created: list[str] = []
+    skipped = 0
+    for item in parsed:
+        title = item.get("title")
+        if not title:
+            skipped += 1
+            continue
+        title = str(title)
+        doi = str(item["doi"]).lower() if item.get("doi") else None
+        norm = _norm_title(title)
+        if (doi and doi in seen_dois) or norm in seen_titles:
+            skipped += 1
+            continue
+
+        db.add(
+            Publication(
+                title=title,
+                authors=item.get("authors"),
+                venue=item.get("venue"),
+                year=item.get("year"),
+                doi=item.get("doi"),
+                url=item.get("url"),
+                abstract=item.get("abstract"),
+            )
+        )
+        if doi:
+            seen_dois.add(doi)
+        seen_titles.add(norm)
+        created.append(title)
+
+    db.commit()
+    return ImportResult(created=len(created), skipped=skipped, titles=created)
+
+
+@router.post("/bibtex", response_model=ImportResult)
+def import_bibtex(
+    payload: BibtexImportRequest,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    """Bulk-import publications from a BibTeX document."""
+    return _persist_pubs(db, parse_bibtex(payload.bibtex))
+
+
+@router.post("/orcid", response_model=ImportResult)
+def import_orcid(
+    payload: OrcidImportRequest,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    """Bulk-import publications from a public ORCID record."""
+    works = fetch_orcid_works(payload.orcid, enrich=payload.enrich)
+    return _persist_pubs(db, works)
+
+
+@router.post("/doi", response_model=ImportResult)
+def import_doi(
+    payload: DoiImportRequest,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    """Import a single publication by DOI (metadata via Crossref)."""
+    pub = fetch_doi(payload.doi)
+    if pub is None:
+        raise HTTPException(status_code=404, detail="DOI not found")
+    return _persist_pubs(db, [pub])
+
 
 GITHUB_API = "https://api.github.com/users/"
 
