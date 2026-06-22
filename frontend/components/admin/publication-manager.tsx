@@ -4,6 +4,7 @@ import { Plus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Field } from "@/components/admin/field";
+import { PublicationImport } from "@/components/admin/publication-import";
 import { PublicationRow } from "@/components/admin/publication-row";
 import { TagPicker } from "@/components/admin/tag-picker";
 import type { ReloadProps } from "@/components/admin/types";
@@ -66,6 +67,8 @@ export function PublicationManager({
 
   return (
     <>
+      <PublicationImport reload={reload} />
+
       <Card>
         <CardHeader>
           <CardTitle>Publications</CardTitle>

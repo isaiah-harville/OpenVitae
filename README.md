@@ -64,6 +64,8 @@ All config is via environment variables — see [.env.example](.env.example). Ke
 - 🖼️ Upload a headshot.
 - 🎨 Change the site color palette (and font) live.
 - 📚 Manage publications: title, authors, venue, year, abstract, DOI, URL, PDF upload.
+- 📥 Import publications from a **BibTeX** file, an **ORCID** record, or a single **DOI**
+  (metadata via Crossref; author lists filled in by DOI). Duplicates are skipped.
 - 🏷️ Tag publications and filter by tag.
 - 🎚️ Toggle site features (about / publications / contact / headshot sections).
 
