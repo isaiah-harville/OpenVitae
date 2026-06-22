@@ -1,6 +1,7 @@
 import { ExternalLink, FileText, Mail } from "lucide-react";
 import Link from "next/link";
 import { ModeToggle } from "@/components/mode-toggle";
+import { SocialIcon } from "@/components/social-icon";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -136,6 +137,29 @@ export default async function Home() {
             {profile.title && <p className="text-lg font-medium text-primary">{profile.title}</p>}
             {profile.location && (
               <p className="text-sm text-muted-foreground">{profile.location}</p>
+            )}
+            {(profile.socials?.length ?? 0) > 0 && (
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {profile.socials?.map((s) => (
+                  <Button
+                    key={`${s.platform}-${s.url}`}
+                    asChild
+                    variant="outline"
+                    size="icon"
+                    className="size-9"
+                  >
+                    <a
+                      href={s.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={s.platform}
+                      title={s.platform}
+                    >
+                      <SocialIcon platform={s.platform} className="size-4" />
+                    </a>
+                  </Button>
+                ))}
+              </div>
             )}
           </div>
         </section>

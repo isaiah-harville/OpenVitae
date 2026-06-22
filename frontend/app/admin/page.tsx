@@ -5,18 +5,27 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ModeToggle } from "@/components/mode-toggle";
+import { SocialIcon } from "@/components/social-icon";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import type { Publication, SiteConfig, Tag } from "@/lib/api";
 import { api, isAuthed, logout } from "@/lib/client";
 import { DEFAULT_PALETTE, PALETTES, type ThemeConfig } from "@/lib/palettes";
+import { SOCIAL_PLATFORMS } from "@/lib/socials";
 
 const FEATURE_KEYS: { key: string; label: string; hint: string }[] = [
   { key: "about", label: "About section", hint: "Show your bio." },
@@ -108,6 +117,7 @@ type EditorProps = {
 function ProfileEditor({ config, setConfig }: EditorProps) {
   const [p, setP] = useState(config.profile || {});
   const links = p.links || [];
+  const socials = p.socials || [];
   const [saving, setSaving] = useState(false);
 
   async function save() {
@@ -192,6 +202,60 @@ function ProfileEditor({ config, setConfig }: EditorProps) {
             onClick={() => setP({ ...p, links: [...links, { label: "", url: "" }] })}
           >
             <Plus className="size-4" /> Add link
+          </Button>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Social links</Label>
+          {socials.map((s, i) => (
+            <div key={i} className="flex gap-2">
+              <Select
+                value={s.platform}
+                onValueChange={(platform) => {
+                  const next = [...socials];
+                  next[i] = { ...next[i], platform };
+                  setP({ ...p, socials: next });
+                }}
+              >
+                <SelectTrigger className="w-44 shrink-0">
+                  <SelectValue placeholder="Platform" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SOCIAL_PLATFORMS.map((plat) => (
+                    <SelectItem key={plat.id} value={plat.id}>
+                      <SocialIcon platform={plat.id} className="size-4" />
+                      {plat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                placeholder={
+                  SOCIAL_PLATFORMS.find((plat) => plat.id === s.platform)?.placeholder ||
+                  "https://…"
+                }
+                value={s.url}
+                onChange={(e) => {
+                  const next = [...socials];
+                  next[i] = { ...next[i], url: e.target.value };
+                  setP({ ...p, socials: next });
+                }}
+              />
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setP({ ...p, socials: socials.filter((_, j) => j !== i) })}
+              >
+                <Trash2 className="size-4" />
+              </Button>
+            </div>
+          ))}
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setP({ ...p, socials: [...socials, { platform: "github", url: "" }] })}
+          >
+            <Plus className="size-4" /> Add social link
           </Button>
         </div>
 

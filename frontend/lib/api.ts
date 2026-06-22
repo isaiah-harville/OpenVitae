@@ -30,6 +30,7 @@ export type SiteConfig = {
     location?: string;
     email?: string;
     links?: { label: string; url: string }[];
+    socials?: { platform: string; url: string }[];
   };
   theme: Record<string, string>;
   features: Record<string, boolean>;
