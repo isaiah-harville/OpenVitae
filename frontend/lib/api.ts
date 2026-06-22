@@ -20,10 +20,31 @@ export type Publication = {
   abstract?: string | null;
   doi?: string | null;
   url?: string | null;
+  featured: boolean;
   sort_order: number;
   created_at: string;
   tags: Tag[];
   file_url?: string | null;
+};
+
+export type Talk = {
+  id: number;
+  title: string;
+  event?: string | null;
+  location?: string | null;
+  event_date?: string | null;
+  url?: string | null;
+  description?: string | null;
+  sort_order: number;
+};
+
+export type Project = {
+  id: number;
+  name: string;
+  description?: string | null;
+  url?: string | null;
+  source_url?: string | null;
+  sort_order: number;
 };
 
 export type SiteConfig = {
@@ -50,8 +71,23 @@ async function getJSON<T>(base: string, path: string): Promise<T> {
 
 // ---- Server-side fetchers (RSC) ----
 export const getSiteConfig = () => getJSON<SiteConfig>(SERVER_API_URL, "/api/site/config");
-export const getPublications = (tag?: string) =>
-  getJSON<Publication[]>(SERVER_API_URL, `/api/publications${tag ? `?tag=${tag}` : ""}`);
+export const getPublications = (params?: {
+  tag?: string;
+  featured?: boolean;
+  sort?: string;
+  limit?: number;
+}) => {
+  const q = new URLSearchParams();
+  if (params?.tag) q.set("tag", params.tag);
+  if (params?.featured) q.set("featured", "true");
+  if (params?.sort) q.set("sort", params.sort);
+  if (params?.limit) q.set("limit", String(params.limit));
+  const qs = q.toString();
+  return getJSON<Publication[]>(SERVER_API_URL, `/api/publications${qs ? `?${qs}` : ""}`);
+};
+export const getTalks = () => getJSON<Talk[]>(SERVER_API_URL, "/api/talks");
+export const getProjects = () => getJSON<Project[]>(SERVER_API_URL, "/api/projects");
+export const getTags = () => getJSON<Tag[]>(SERVER_API_URL, "/api/tags");
 
 // ---- Client-side auth helper ----
 export function authHeaders(): HeadersInit {

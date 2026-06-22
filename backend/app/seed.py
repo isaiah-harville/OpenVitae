@@ -19,6 +19,8 @@ DEFAULT_FEATURES = {
     "about": True,
     "contact": True,
     "headshot": True,
+    "talks": False,
+    "projects": False,
 }
 
 DEFAULT_PROFILE = {
@@ -28,6 +30,7 @@ DEFAULT_PROFILE = {
     "location": "",
     "email": "",
     "links": [],
+    "socials": [],
 }
 
 

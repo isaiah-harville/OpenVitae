@@ -1,6 +1,13 @@
 "use client";
 
-import { PUBLIC_API_URL, type Publication, type SiteConfig, type Tag } from "./api";
+import {
+  type Project,
+  PUBLIC_API_URL,
+  type Publication,
+  type SiteConfig,
+  type Tag,
+  type Talk,
+} from "./api";
 
 function token(): string | null {
   return typeof window !== "undefined" ? localStorage.getItem("ov_token") : null;
@@ -53,6 +60,20 @@ export const api = {
   updatePublication: (id: number, body: Record<string, unknown>) =>
     jsonReq<Publication>(`/api/publications/${id}`, "PUT", body),
   deletePublication: (id: number) => req<void>(`/api/publications/${id}`, { method: "DELETE" }),
+  reorderPublications: (ids: number[]) =>
+    jsonReq<Publication[]>("/api/publications/reorder", "PUT", { ids }),
+
+  listTalks: () => req<Talk[]>("/api/talks", {}, false),
+  createTalk: (body: Record<string, unknown>) => jsonReq<Talk>("/api/talks", "POST", body),
+  updateTalk: (id: number, body: Record<string, unknown>) =>
+    jsonReq<Talk>(`/api/talks/${id}`, "PUT", body),
+  deleteTalk: (id: number) => req<void>(`/api/talks/${id}`, { method: "DELETE" }),
+
+  listProjects: () => req<Project[]>("/api/projects", {}, false),
+  createProject: (body: Record<string, unknown>) => jsonReq<Project>("/api/projects", "POST", body),
+  updateProject: (id: number, body: Record<string, unknown>) =>
+    jsonReq<Project>(`/api/projects/${id}`, "PUT", body),
+  deleteProject: (id: number) => req<void>(`/api/projects/${id}`, { method: "DELETE" }),
 
   uploadHeadshot: (file: File) => {
     const fd = new FormData();
@@ -67,4 +88,34 @@ export const api = {
       body: fd,
     });
   },
+
+  // Backup downloads a zip; restore uploads one.
+  async downloadBackup(): Promise<Blob> {
+    const headers = new Headers();
+    if (token()) headers.set("Authorization", `Bearer ${token()}`);
+    const res = await fetch(`${PUBLIC_API_URL}/api/backup`, { headers });
+    if (!res.ok) throw new Error(`Backup failed (${res.status})`);
+    return res.blob();
+  },
+  restoreBackup: (file: File) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return req<{ status: string }>("/api/restore", { method: "POST", body: fd });
+  },
+
+  importGithub: (username: string) =>
+    req<GithubImportResult>(`/api/import/github/${encodeURIComponent(username)}`),
+  importGithubHeadshot: (username: string) =>
+    req<{ headshot_url: string }>(`/api/import/github/${encodeURIComponent(username)}/headshot`, {
+      method: "POST",
+    }),
+};
+
+export type GithubImportResult = {
+  name?: string | null;
+  bio?: string | null;
+  location?: string | null;
+  links: { label: string; url: string }[];
+  socials: { platform: string; url: string }[];
+  avatar_url?: string | null;
 };

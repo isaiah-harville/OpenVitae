@@ -11,9 +11,10 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 
-# App source
+# App source + Alembic migrations (run on startup)
 COPY app ./app
-COPY README.md ./
+COPY migrations ./migrations
+COPY alembic.ini README.md ./
 
 EXPOSE 8000
 CMD ["uv", "run", "--no-sync", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
