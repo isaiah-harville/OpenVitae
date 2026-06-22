@@ -1,13 +1,13 @@
-import { ArrowRight, ExternalLink, Mail } from "lucide-react";
 import Link from "next/link";
 import { Markdown } from "@/components/markdown";
+import { ContactBlock } from "@/components/public/contact-block";
 import { ProfileHero } from "@/components/public/profile-hero";
-import { ProjectsSection } from "@/components/public/projects-section";
+import { ProjectsList } from "@/components/public/projects-section";
+import { PublicationsPreview } from "@/components/public/publications-preview";
 import { SectionHeading } from "@/components/public/section-heading";
+import { type Section, SectionTabs } from "@/components/public/section-tabs";
 import { SiteHeader } from "@/components/public/site-header";
-import { TalksSection } from "@/components/public/talks-section";
-import { PublicationCard } from "@/components/publication-card";
-import { Button } from "@/components/ui/button";
+import { TalksList } from "@/components/public/talks-section";
 import { Separator } from "@/components/ui/separator";
 import {
   getProjects,
@@ -19,6 +19,7 @@ import {
   type SiteConfig,
   type Talk,
 } from "@/lib/api";
+import { DEFAULT_LAYOUT, type ThemeConfig } from "@/lib/palettes";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,7 @@ export default async function Home() {
 
   const features = config.features || {};
   const profile = config.profile || {};
+  const layout = (config.theme as ThemeConfig)?.layout || DEFAULT_LAYOUT;
 
   const [pubs, talks, projects] = await Promise.all([
     features.publications !== false
@@ -56,8 +58,40 @@ export default async function Home() {
       : Promise.resolve([] as Project[]),
   ]);
 
-  const hasMorePubs = pubs.length > PREVIEW_LIMIT;
-  const previewPubs = pubs.slice(0, PREVIEW_LIMIT);
+  // Build the enabled sections once; render them stacked (linear) or as tabs (pages).
+  const sections: Section[] = [];
+  if (features.about !== false && profile.bio) {
+    sections.push({ value: "about", label: "About", content: <Markdown>{profile.bio}</Markdown> });
+  }
+  if (features.publications !== false) {
+    sections.push({
+      value: "publications",
+      label: "Publications",
+      content: (
+        <PublicationsPreview
+          pubs={pubs.slice(0, PREVIEW_LIMIT)}
+          hasMore={pubs.length > PREVIEW_LIMIT}
+        />
+      ),
+    });
+  }
+  if (features.talks !== false && talks.length > 0) {
+    sections.push({ value: "talks", label: "Talks", content: <TalksList talks={talks} /> });
+  }
+  if (features.projects !== false && projects.length > 0) {
+    sections.push({
+      value: "projects",
+      label: "Projects",
+      content: <ProjectsList projects={projects} />,
+    });
+  }
+  if (features.contact !== false && (profile.email || (profile.links?.length ?? 0) > 0)) {
+    sections.push({
+      value: "contact",
+      label: "Contact",
+      content: <ContactBlock profile={profile} />,
+    });
+  }
 
   return (
     <div className="min-h-screen">
@@ -70,58 +104,15 @@ export default async function Home() {
           showHeadshot={features.headshot !== false}
         />
 
-        {features.about !== false && profile.bio && (
-          <section className="mt-12">
-            <SectionHeading>About</SectionHeading>
-            <Markdown>{profile.bio}</Markdown>
-          </section>
-        )}
-
-        {features.publications !== false && (
-          <section className="mt-12">
-            <SectionHeading>Publications</SectionHeading>
-            {previewPubs.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No publications yet.</p>
-            ) : (
-              <div className="space-y-3">
-                {previewPubs.map((p) => (
-                  <PublicationCard key={p.id} pub={p} />
-                ))}
-              </div>
-            )}
-            {hasMorePubs && (
-              <Button asChild variant="ghost" className="mt-3">
-                <Link href="/publications">
-                  View all publications <ArrowRight className="size-4" />
-                </Link>
-              </Button>
-            )}
-          </section>
-        )}
-
-        {features.talks !== false && <TalksSection talks={talks} />}
-        {features.projects !== false && <ProjectsSection projects={projects} />}
-
-        {features.contact !== false && (profile.email || (profile.links?.length ?? 0) > 0) && (
-          <section className="mt-12">
-            <SectionHeading>Contact</SectionHeading>
-            <div className="flex flex-wrap gap-2">
-              {profile.email && (
-                <Button asChild variant="outline" size="sm">
-                  <a href={`mailto:${profile.email}`}>
-                    <Mail className="size-4" /> {profile.email}
-                  </a>
-                </Button>
-              )}
-              {profile.links?.map((l) => (
-                <Button asChild key={l.url} variant="ghost" size="sm">
-                  <a href={l.url} target="_blank" rel="noreferrer">
-                    <ExternalLink className="size-4" /> {l.label}
-                  </a>
-                </Button>
-              ))}
-            </div>
-          </section>
+        {layout === "pages" ? (
+          <SectionTabs sections={sections} />
+        ) : (
+          sections.map((s) => (
+            <section key={s.value} className="mt-12">
+              <SectionHeading>{s.label}</SectionHeading>
+              {s.content}
+            </section>
+          ))
         )}
 
         <Separator className="mt-16" />

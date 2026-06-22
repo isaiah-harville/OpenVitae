@@ -25,7 +25,11 @@ export type ThemeConfig = {
   customPrimary?: string;
   // Default color mode for first-time visitors.
   defaultMode?: "light" | "dark" | "system";
+  // Public homepage layout: "linear" stacks sections; "pages" shows them as tabs.
+  layout?: "linear" | "pages";
 };
+
+export const DEFAULT_LAYOUT: "linear" | "pages" = "linear";
 
 export function paletteName(id: string | undefined): string {
   return PALETTES.find((p) => p.id === id)?.name ?? "Neutral";

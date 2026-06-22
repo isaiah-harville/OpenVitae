@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/client";
-import { DEFAULT_PALETTE, PALETTES, type ThemeConfig } from "@/lib/palettes";
+import { DEFAULT_LAYOUT, DEFAULT_PALETTE, PALETTES, type ThemeConfig } from "@/lib/palettes";
 
 export function AppearanceEditor({ config, setConfig }: EditorProps) {
   const [theme, setTheme] = useState<ThemeConfig>((config.theme as ThemeConfig) || {});
@@ -76,6 +76,27 @@ export function AppearanceEditor({ config, setConfig }: EditorProps) {
               </button>
             ))}
           </div>
+        </div>
+
+        <div>
+          <Label className="mb-2 block">Layout</Label>
+          <div className="flex gap-2">
+            {(["linear", "pages"] as const).map((l) => (
+              <Button
+                key={l}
+                type="button"
+                size="sm"
+                variant={(theme.layout || DEFAULT_LAYOUT) === l ? "default" : "outline"}
+                onClick={() => setTheme((t) => ({ ...t, layout: l }))}
+                className="capitalize"
+              >
+                {l}
+              </Button>
+            ))}
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Linear stacks every section on one scrolling page; Pages shows them as tabs.
+          </p>
         </div>
 
         <div>
