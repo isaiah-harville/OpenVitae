@@ -1,8 +1,9 @@
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import (
     Boolean,
     Column,
+    Date,
     DateTime,
     ForeignKey,
     Integer,
@@ -81,9 +82,37 @@ class Publication(Base):
     url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     # Object-storage key of the uploaded PDF, if any.
     file_key: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    # Pinned/featured publications surface on the home page preview.
+    featured: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     tags: Mapped[list[Tag]] = relationship(
         secondary=publication_tags, back_populates="publications"
     )
+
+
+class Talk(Base):
+    __tablename__ = "talks"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    title: Mapped[str] = mapped_column(String(512), nullable=False)
+    event: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    location: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    event_date: Mapped[date | None] = mapped_column(Date, nullable=True, index=True)
+    url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Project(Base):
+    __tablename__ = "projects"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(512), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    source_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

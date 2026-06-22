@@ -1,6 +1,13 @@
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr
+
+
+# ---- Shared ----
+class ReorderRequest(BaseModel):
+    """Ordered list of ids; index becomes the new sort_order."""
+
+    ids: list[int]
 
 
 # ---- Auth ----
@@ -61,6 +68,7 @@ class PublicationBase(BaseModel):
     abstract: str | None = None
     doi: str | None = None
     url: str | None = None
+    featured: bool = False
     sort_order: int = 0
 
 
@@ -76,6 +84,7 @@ class PublicationUpdate(BaseModel):
     abstract: str | None = None
     doi: str | None = None
     url: str | None = None
+    featured: bool | None = None
     sort_order: int | None = None
     tag_ids: list[int] | None = None
 
@@ -86,3 +95,59 @@ class PublicationOut(PublicationBase):
     created_at: datetime
     tags: list[TagOut] = []
     file_url: str | None = None
+
+
+# ---- Talks ----
+class TalkBase(BaseModel):
+    title: str
+    event: str | None = None
+    location: str | None = None
+    event_date: date | None = None
+    url: str | None = None
+    description: str | None = None
+    sort_order: int = 0
+
+
+class TalkCreate(TalkBase):
+    pass
+
+
+class TalkUpdate(BaseModel):
+    title: str | None = None
+    event: str | None = None
+    location: str | None = None
+    event_date: date | None = None
+    url: str | None = None
+    description: str | None = None
+    sort_order: int | None = None
+
+
+class TalkOut(TalkBase):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+
+
+# ---- Projects ----
+class ProjectBase(BaseModel):
+    name: str
+    description: str | None = None
+    url: str | None = None
+    source_url: str | None = None
+    sort_order: int = 0
+
+
+class ProjectCreate(ProjectBase):
+    pass
+
+
+class ProjectUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    url: str | None = None
+    source_url: str | None = None
+    sort_order: int | None = None
+
+
+class ProjectOut(ProjectBase):
+    model_config = ConfigDict(from_attributes=True)
+    id: int

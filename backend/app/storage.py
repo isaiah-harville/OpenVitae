@@ -45,6 +45,20 @@ def delete_object(key: str) -> None:
         pass
 
 
+def download_bytes(key: str) -> tuple[bytes, str] | None:
+    """Fetch an object's bytes and content type, or None if missing."""
+    try:
+        obj = _client().get_object(Bucket=settings.s3_bucket, Key=key)
+        return obj["Body"].read(), obj.get("ContentType", "application/octet-stream")
+    except ClientError:
+        return None
+
+
+def put_bytes(key: str, data: bytes, content_type: str) -> None:
+    """Upload bytes at an explicit key (used by restore to preserve keys)."""
+    _client().put_object(Bucket=settings.s3_bucket, Key=key, Body=data, ContentType=content_type)
+
+
 def presigned_url(key: str | None) -> str | None:
     """Generate a presigned GET URL using the browser-reachable endpoint."""
     if not key:
