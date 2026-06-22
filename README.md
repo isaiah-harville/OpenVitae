@@ -97,5 +97,5 @@ You still need Postgres and MinIO running — the simplest path is
 
 ## License
 
-[PolyForm Noncommercial License 1.0.0](LICENSE) — free to use, modify, and share for any
-**noncommercial** purpose. Commercial use is not permitted.
+[MIT](LICENSE) — free to use, modify, and distribute, with
+attribution.

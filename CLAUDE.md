@@ -52,5 +52,5 @@ Frontend `:3000`, API `:8000` (`/docs`), MinIO console `:9001`. Reset all data:
 
 ## License
 
-PolyForm Noncommercial 1.0.0 — free for noncommercial use; commercial use not permitted.
-For *software* this is the right pick (CC BY-NC is for content). Keep new code under it.
+MIT — permissive; free to use, modify, and distribute (including commercially) with
+attribution. Keep new code under it.
