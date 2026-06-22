@@ -9,11 +9,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/client";
 import { DEFAULT_LAYOUT, DEFAULT_PALETTE, PALETTES, type ThemeConfig } from "@/lib/palettes";
+import { stableStringify } from "@/lib/utils";
 
 export function AppearanceEditor({ config, setConfig }: EditorProps) {
   const [theme, setTheme] = useState<ThemeConfig>((config.theme as ThemeConfig) || {});
   const [saving, setSaving] = useState(false);
   const selected = theme.palette || DEFAULT_PALETTE;
+  const dirty = stableStringify(theme) !== stableStringify(config.theme || {});
 
   function previewPalette(id: string) {
     document.documentElement.setAttribute("data-palette", id);
@@ -143,7 +145,7 @@ export function AppearanceEditor({ config, setConfig }: EditorProps) {
           </p>
         </div>
 
-        <Button onClick={save} disabled={saving}>
+        <Button onClick={save} disabled={saving || !dirty}>
           Save appearance
         </Button>
       </CardContent>

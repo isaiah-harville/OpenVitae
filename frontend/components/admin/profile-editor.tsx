@@ -21,12 +21,14 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { api, type GithubImportResult } from "@/lib/client";
 import { SOCIAL_PLATFORMS } from "@/lib/socials";
+import { stableStringify } from "@/lib/utils";
 
 export function ProfileEditor({ config, setConfig }: EditorProps) {
   const [p, setP] = useState(config.profile || {});
   const links = p.links || [];
   const socials = p.socials || [];
   const [saving, setSaving] = useState(false);
+  const dirty = stableStringify(p) !== stableStringify(config.profile || {});
 
   async function save() {
     setSaving(true);
@@ -193,7 +195,7 @@ export function ProfileEditor({ config, setConfig }: EditorProps) {
           </Button>
         </div>
 
-        <Button onClick={save} disabled={saving}>
+        <Button onClick={save} disabled={saving || !dirty}>
           Save profile
         </Button>
       </CardContent>

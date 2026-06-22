@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { Markdown } from "@/components/markdown";
 import { ContactBlock } from "@/components/public/contact-block";
+import { PagesLayout, type Section } from "@/components/public/pages-layout";
 import { ProfileHero } from "@/components/public/profile-hero";
 import { ProjectsList } from "@/components/public/projects-section";
 import { PublicationsPreview } from "@/components/public/publications-preview";
 import { SectionHeading } from "@/components/public/section-heading";
-import { type Section, SectionTabs } from "@/components/public/section-tabs";
+import { SiteFooter } from "@/components/public/site-footer";
 import { SiteHeader } from "@/components/public/site-header";
 import { TalksList } from "@/components/public/talks-section";
-import { Separator } from "@/components/ui/separator";
 import {
   getProjects,
   getPublications,
@@ -58,7 +58,8 @@ export default async function Home() {
       : Promise.resolve([] as Project[]),
   ]);
 
-  // Build the enabled sections once; render them stacked (linear) or as tabs (pages).
+  // Build the enabled sections once; render them stacked (linear) or via the
+  // navbar-driven pages layout.
   const sections: Section[] = [];
   if (features.about !== false && profile.bio) {
     sections.push({ value: "about", label: "About", content: <Markdown>{profile.bio}</Markdown> });
@@ -93,45 +94,30 @@ export default async function Home() {
     });
   }
 
+  const hero = (
+    <ProfileHero
+      profile={profile}
+      headshotUrl={config.headshot_url}
+      showHeadshot={features.headshot !== false}
+    />
+  );
+
+  if (layout === "pages") {
+    return <PagesLayout name={profile.name} hero={hero} sections={sections} />;
+  }
+
   return (
     <div className="min-h-screen">
       <SiteHeader name={profile.name} />
-
       <main className="mx-auto max-w-2xl px-5 pb-24 pt-10">
-        <ProfileHero
-          profile={profile}
-          headshotUrl={config.headshot_url}
-          showHeadshot={features.headshot !== false}
-        />
-
-        {layout === "pages" ? (
-          <SectionTabs sections={sections} />
-        ) : (
-          sections.map((s) => (
-            <section key={s.value} className="mt-12">
-              <SectionHeading>{s.label}</SectionHeading>
-              {s.content}
-            </section>
-          ))
-        )}
-
-        <Separator className="mt-16" />
-        <footer className="mt-6 flex items-center justify-between text-xs text-muted-foreground">
-          <span>
-            Powered by{" "}
-            <a
-              href="https://github.com/isaiah-harville/OpenVitae"
-              target="_blank"
-              rel="noreferrer"
-              className="underline hover:text-foreground"
-            >
-              OpenVitae
-            </a>
-          </span>
-          <Link href="/admin" className="hover:text-foreground">
-            Admin
-          </Link>
-        </footer>
+        {hero}
+        {sections.map((s) => (
+          <section key={s.value} className="mt-12">
+            <SectionHeading>{s.label}</SectionHeading>
+            {s.content}
+          </section>
+        ))}
+        <SiteFooter />
       </main>
     </div>
   );
