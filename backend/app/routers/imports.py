@@ -32,6 +32,20 @@ def _fetch_github_user(username: str) -> dict:
         raise HTTPException(status_code=502, detail="GitHub request failed") from exc
 
 
+def _fetch_profile_readme(username: str) -> str | None:
+    """Fetch the profile README (the special <user>/<user> repo), if any."""
+    req = urllib.request.Request(
+        f"https://api.github.com/repos/{username}/{username}/readme",
+        headers={"Accept": "application/vnd.github.raw", "User-Agent": "OpenVitae"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: S310 (fixed host)
+            text = resp.read().decode("utf-8").strip()
+            return text or None
+    except (urllib.error.URLError, TimeoutError, ValueError):
+        return None
+
+
 @router.get("/github/{username}")
 def import_github(username: str, _: User = Depends(get_current_user)):
     """Map a public GitHub profile into OpenVitae profile fields (no mutation)."""
@@ -46,9 +60,12 @@ def import_github(username: str, _: User = Depends(get_current_user)):
     if u.get("twitter_username"):
         socials.append({"platform": "x", "url": f"https://x.com/{u['twitter_username']}"})
 
+    # Prefer the rich profile README (Markdown) over the one-line bio when present.
+    bio = _fetch_profile_readme(username) or u.get("bio")
+
     return {
         "name": u.get("name") or u.get("login"),
-        "bio": u.get("bio"),
+        "bio": bio,
         "location": u.get("location"),
         "links": links,
         "socials": socials,
