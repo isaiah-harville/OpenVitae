@@ -1,5 +1,6 @@
 import { ArrowRight, ExternalLink, Mail } from "lucide-react";
 import Link from "next/link";
+import { Markdown } from "@/components/markdown";
 import { ProfileHero } from "@/components/public/profile-hero";
 import { ProjectsSection } from "@/components/public/projects-section";
 import { SectionHeading } from "@/components/public/section-heading";
@@ -72,7 +73,7 @@ export default async function Home() {
         {features.about !== false && profile.bio && (
           <section className="mt-12">
             <SectionHeading>About</SectionHeading>
-            <p className="leading-relaxed">{profile.bio}</p>
+            <Markdown>{profile.bio}</Markdown>
           </section>
         )}
 
