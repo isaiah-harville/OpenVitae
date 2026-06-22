@@ -9,12 +9,9 @@ from .security import hash_password
 settings = get_settings()
 
 DEFAULT_THEME = {
-    "primary": "#2563eb",
-    "secondary": "#0f172a",
-    "accent": "#f59e0b",
-    "background": "#ffffff",
-    "text": "#0f172a",
-    "font": "Inter, system-ui, sans-serif",
+    # Named palette (colors live in the frontend CSS); plus the default color mode.
+    "palette": "neutral",
+    "defaultMode": "system",
 }
 
 DEFAULT_FEATURES = {

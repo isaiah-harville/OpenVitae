@@ -1,24 +1,28 @@
 "use client";
 
+import { LogOut, Plus, Trash2, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { api, isAuthed, logout } from "@/lib/client";
+import { toast } from "sonner";
+import { ModeToggle } from "@/components/mode-toggle";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import type { Publication, SiteConfig, Tag } from "@/lib/api";
-import { PALETTES, matchPaletteId } from "@/lib/palettes";
+import { api, isAuthed, logout } from "@/lib/client";
+import { DEFAULT_PALETTE, PALETTES, type ThemeConfig } from "@/lib/palettes";
 
-const THEME_COLORS: { key: string; label: string }[] = [
-  { key: "primary", label: "Primary" },
-  { key: "secondary", label: "Secondary" },
-  { key: "accent", label: "Accent" },
-  { key: "background", label: "Background" },
-  { key: "text", label: "Text" },
-];
-
-const FEATURE_KEYS: { key: string; label: string }[] = [
-  { key: "about", label: "About section" },
-  { key: "publications", label: "Publications section" },
-  { key: "contact", label: "Contact section" },
-  { key: "headshot", label: "Show headshot" },
+const FEATURE_KEYS: { key: string; label: string; hint: string }[] = [
+  { key: "about", label: "About section", hint: "Show your bio." },
+  { key: "publications", label: "Publications", hint: "Show the publications list." },
+  { key: "contact", label: "Contact", hint: "Show email and links." },
+  { key: "headshot", label: "Headshot", hint: "Show your photo." },
 ];
 
 export default function AdminDashboard() {
@@ -26,7 +30,6 @@ export default function AdminDashboard() {
   const [config, setConfig] = useState<SiteConfig | null>(null);
   const [tags, setTags] = useState<Tag[]>([]);
   const [pubs, setPubs] = useState<Publication[]>([]);
-  const [msg, setMsg] = useState("");
 
   const reload = useCallback(async () => {
     const [c, t, p] = await Promise.all([api.getConfig(), api.listTags(), api.listPublications()]);
@@ -40,43 +43,59 @@ export default function AdminDashboard() {
       router.push("/admin/login");
       return;
     }
-    reload().catch((e) => setMsg(String(e)));
+    reload().catch((e) => toast.error(String(e)));
   }, [router, reload]);
 
-  if (!config) return <div className="admin">Loading…</div>;
-
-  function flash(text: string) {
-    setMsg(text);
-    setTimeout(() => setMsg(""), 3000);
+  if (!config) {
+    return <div className="mx-auto max-w-3xl px-5 py-16 text-muted-foreground">Loading…</div>;
   }
 
   return (
-    <div className="admin">
-      <div className="row" style={{ justifyContent: "space-between" }}>
-        <h1>OpenVitae Admin</h1>
-        <div className="row">
-          <a href="/" target="_blank" rel="noreferrer">
-            View site
-          </a>
-          <button
-            className="secondary"
+    <div className="mx-auto max-w-3xl px-5 py-8">
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-xl font-bold">OpenVitae Admin</h1>
+        <div className="flex items-center gap-2">
+          <ModeToggle />
+          <Button asChild variant="outline" size="sm">
+            <a href="/" target="_blank" rel="noreferrer">
+              View site
+            </a>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => {
               logout();
               router.push("/admin/login");
             }}
           >
-            Sign out
-          </button>
+            <LogOut className="size-4" /> Sign out
+          </Button>
         </div>
       </div>
-      {msg && <p className="muted">{msg}</p>}
 
-      <ProfileEditor config={config} setConfig={setConfig} onSave={flash} />
-      <HeadshotEditor config={config} setConfig={setConfig} onSave={flash} />
-      <ThemeEditor config={config} setConfig={setConfig} onSave={flash} />
-      <FeatureEditor config={config} setConfig={setConfig} onSave={flash} />
-      <TagManager tags={tags} reload={reload} onSave={flash} />
-      <PublicationManager pubs={pubs} tags={tags} reload={reload} onSave={flash} />
+      <Tabs defaultValue="profile">
+        <TabsList className="mb-4">
+          <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsTrigger value="appearance">Appearance</TabsTrigger>
+          <TabsTrigger value="publications">Publications</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="profile" className="space-y-6">
+          <ProfileEditor config={config} setConfig={setConfig} />
+          <HeadshotEditor config={config} setConfig={setConfig} />
+          <FeatureEditor config={config} setConfig={setConfig} />
+        </TabsContent>
+
+        <TabsContent value="appearance">
+          <AppearanceEditor config={config} setConfig={setConfig} />
+        </TabsContent>
+
+        <TabsContent value="publications" className="space-y-6">
+          <TagManager tags={tags} reload={reload} />
+          <PublicationManager pubs={pubs} tags={tags} reload={reload} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
@@ -84,79 +103,107 @@ export default function AdminDashboard() {
 type EditorProps = {
   config: SiteConfig;
   setConfig: (c: SiteConfig) => void;
-  onSave: (msg: string) => void;
 };
 
-function ProfileEditor({ config, setConfig, onSave }: EditorProps) {
+function ProfileEditor({ config, setConfig }: EditorProps) {
   const [p, setP] = useState(config.profile || {});
   const links = p.links || [];
+  const [saving, setSaving] = useState(false);
 
   async function save() {
-    const updated = await api.updateConfig({ profile: p });
-    setConfig(updated);
-    onSave("Profile saved");
+    setSaving(true);
+    try {
+      const updated = await api.updateConfig({ profile: p });
+      setConfig(updated);
+      toast.success("Profile saved");
+    } catch (e) {
+      toast.error(String(e));
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
-    <section className="card">
-      <h2>Profile</h2>
-      <label>Name</label>
-      <input value={p.name || ""} onChange={(e) => setP({ ...p, name: e.target.value })} />
-      <label>Title</label>
-      <input value={p.title || ""} onChange={(e) => setP({ ...p, title: e.target.value })} />
-      <label>Location</label>
-      <input value={p.location || ""} onChange={(e) => setP({ ...p, location: e.target.value })} />
-      <label>Email</label>
-      <input value={p.email || ""} onChange={(e) => setP({ ...p, email: e.target.value })} />
-      <label>Bio</label>
-      <textarea rows={4} value={p.bio || ""} onChange={(e) => setP({ ...p, bio: e.target.value })} />
-
-      <label>Links</label>
-      {links.map((l, i) => (
-        <div className="row" key={i} style={{ marginBottom: "0.4rem" }}>
-          <input
-            placeholder="Label"
-            value={l.label}
-            onChange={(e) => {
-              const next = [...links];
-              next[i] = { ...next[i], label: e.target.value };
-              setP({ ...p, links: next });
-            }}
-          />
-          <input
-            placeholder="https://…"
-            value={l.url}
-            onChange={(e) => {
-              const next = [...links];
-              next[i] = { ...next[i], url: e.target.value };
-              setP({ ...p, links: next });
-            }}
-          />
-          <button
-            className="danger"
-            type="button"
-            onClick={() => setP({ ...p, links: links.filter((_, j) => j !== i) })}
-          >
-            ✕
-          </button>
+    <Card>
+      <CardHeader>
+        <CardTitle>Profile</CardTitle>
+        <CardDescription>Your name, title, and contact details.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Name">
+            <Input value={p.name || ""} onChange={(e) => setP({ ...p, name: e.target.value })} />
+          </Field>
+          <Field label="Title">
+            <Input value={p.title || ""} onChange={(e) => setP({ ...p, title: e.target.value })} />
+          </Field>
+          <Field label="Location">
+            <Input
+              value={p.location || ""}
+              onChange={(e) => setP({ ...p, location: e.target.value })}
+            />
+          </Field>
+          <Field label="Email">
+            <Input value={p.email || ""} onChange={(e) => setP({ ...p, email: e.target.value })} />
+          </Field>
         </div>
-      ))}
-      <button
-        className="secondary"
-        type="button"
-        onClick={() => setP({ ...p, links: [...links, { label: "", url: "" }] })}
-      >
-        + Add link
-      </button>
+        <Field label="Bio">
+          <Textarea
+            rows={4}
+            value={p.bio || ""}
+            onChange={(e) => setP({ ...p, bio: e.target.value })}
+          />
+        </Field>
 
-      <div style={{ marginTop: "1rem" }}>
-        <button onClick={save}>Save profile</button>
-      </div>
-    </section>
+        <div className="space-y-2">
+          <Label>Links</Label>
+          {links.map((l, i) => (
+            <div key={i} className="flex gap-2">
+              <Input
+                placeholder="Label"
+                value={l.label}
+                onChange={(e) => {
+                  const next = [...links];
+                  next[i] = { ...next[i], label: e.target.value };
+                  setP({ ...p, links: next });
+                }}
+              />
+              <Input
+                placeholder="https://…"
+                value={l.url}
+                onChange={(e) => {
+                  const next = [...links];
+                  next[i] = { ...next[i], url: e.target.value };
+                  setP({ ...p, links: next });
+                }}
+              />
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setP({ ...p, links: links.filter((_, j) => j !== i) })}
+              >
+                <Trash2 className="size-4" />
+              </Button>
+            </div>
+          ))}
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setP({ ...p, links: [...links, { label: "", url: "" }] })}
+          >
+            <Plus className="size-4" /> Add link
+          </Button>
+        </div>
+
+        <Button onClick={save} disabled={saving}>
+          Save profile
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 
-function HeadshotEditor({ config, setConfig, onSave }: EditorProps) {
+function HeadshotEditor({ config, setConfig }: EditorProps) {
   const [busy, setBusy] = useState(false);
 
   async function upload(file: File) {
@@ -164,200 +211,257 @@ function HeadshotEditor({ config, setConfig, onSave }: EditorProps) {
     try {
       const { headshot_url } = await api.uploadHeadshot(file);
       setConfig({ ...config, headshot_url });
-      onSave("Headshot updated");
+      toast.success("Headshot updated");
+    } catch (e) {
+      toast.error(String(e));
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <section className="card">
-      <h2>Headshot</h2>
-      <div className="row">
-        {config.headshot_url && (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img className="headshot" src={config.headshot_url} alt="Headshot" />
-        )}
-        <input
+    <Card>
+      <CardHeader>
+        <CardTitle>Headshot</CardTitle>
+        <CardDescription>A square image works best.</CardDescription>
+      </CardHeader>
+      <CardContent className="flex items-center gap-4">
+        <Avatar className="size-20">
+          {config.headshot_url && <AvatarImage src={config.headshot_url} alt="Headshot" />}
+          <AvatarFallback>
+            <Upload className="size-5 text-muted-foreground" />
+          </AvatarFallback>
+        </Avatar>
+        <Input
           type="file"
           accept="image/*"
           disabled={busy}
+          className="max-w-xs"
           onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])}
         />
-      </div>
-    </section>
+      </CardContent>
+    </Card>
   );
 }
 
-function ThemeEditor({ config, setConfig, onSave }: EditorProps) {
-  const [theme, setTheme] = useState<Record<string, string>>(config.theme || {});
-  const [advanced, setAdvanced] = useState(matchPaletteId(config.theme || {}) === null);
-  const selectedId = matchPaletteId(theme);
-
-  function applyPalette(id: string) {
-    const p = PALETTES.find((x) => x.id === id);
-    if (!p) return;
-    setTheme({
-      primary: p.theme.primary,
-      secondary: p.theme.secondary,
-      accent: p.theme.accent,
-      background: p.theme.background,
-      text: p.theme.text,
-      font: theme.font || p.theme.font || "",
-    });
-  }
-
-  async function save() {
-    const updated = await api.updateConfig({ theme });
-    setConfig(updated);
-    onSave("Theme saved — reload the public site to see it");
-  }
-
-  return (
-    <section className="card">
-      <h2>Color palette</h2>
-      <p className="muted">Pick a palette, or switch to Advanced to tune every color.</p>
-
-      <div className="swatches">
-        {PALETTES.map((p) => (
-          <button
-            type="button"
-            key={p.id}
-            className={`swatch ${selectedId === p.id ? "swatch--active" : ""}`}
-            onClick={() => applyPalette(p.id)}
-            title={p.name}
-          >
-            <span className="swatch__chips" style={{ background: p.theme.background }}>
-              <span style={{ background: p.theme.primary }} />
-              <span style={{ background: p.theme.accent }} />
-              <span style={{ background: p.theme.secondary }} />
-            </span>
-            <span className="swatch__name">{p.name}</span>
-          </button>
-        ))}
-      </div>
-
-      <div className="toggle" style={{ marginTop: "1rem" }}>
-        <input
-          type="checkbox"
-          id="advanced-theme"
-          checked={advanced}
-          onChange={(e) => setAdvanced(e.target.checked)}
-        />
-        <label htmlFor="advanced-theme" style={{ margin: 0 }}>
-          Advanced (manual colors)
-        </label>
-      </div>
-
-      {advanced && (
-        <div style={{ marginTop: "0.75rem" }}>
-          {THEME_COLORS.map(({ key, label }) => (
-            <div className="row" key={key} style={{ marginBottom: "0.4rem" }}>
-              <label style={{ margin: 0, width: 120 }}>{label}</label>
-              <input
-                type="color"
-                style={{ width: 48, padding: 2, height: 38 }}
-                value={theme[key] || "#000000"}
-                onChange={(e) => setTheme({ ...theme, [key]: e.target.value })}
-              />
-              <input
-                style={{ width: 130 }}
-                value={theme[key] || ""}
-                onChange={(e) => setTheme({ ...theme, [key]: e.target.value })}
-              />
-            </div>
-          ))}
-          <label>Font family</label>
-          <input
-            value={theme.font || ""}
-            onChange={(e) => setTheme({ ...theme, font: e.target.value })}
-          />
-        </div>
-      )}
-
-      <div style={{ marginTop: "1rem" }}>
-        <button onClick={save}>Save palette</button>
-      </div>
-    </section>
-  );
-}
-
-function FeatureEditor({ config, setConfig, onSave }: EditorProps) {
+function FeatureEditor({ config, setConfig }: EditorProps) {
   const [features, setFeatures] = useState<Record<string, boolean>>(config.features || {});
+  const [saving, setSaving] = useState(false);
 
-  async function save() {
-    const updated = await api.updateConfig({ features });
-    setConfig(updated);
-    onSave("Features saved");
+  async function toggle(key: string, value: boolean) {
+    const next = { ...features, [key]: value };
+    setFeatures(next);
+    setSaving(true);
+    try {
+      const updated = await api.updateConfig({ features: next });
+      setConfig(updated);
+      toast.success("Features updated");
+    } catch (e) {
+      toast.error(String(e));
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
-    <section className="card">
-      <h2>Features</h2>
-      {FEATURE_KEYS.map(({ key, label }) => (
-        <div className="toggle" key={key}>
-          <input
-            type="checkbox"
-            id={`feat-${key}`}
-            checked={features[key] !== false}
-            onChange={(e) => setFeatures({ ...features, [key]: e.target.checked })}
-          />
-          <label htmlFor={`feat-${key}`} style={{ margin: 0 }}>
-            {label}
-          </label>
-        </div>
-      ))}
-      <div style={{ marginTop: "1rem" }}>
-        <button onClick={save}>Save features</button>
-      </div>
-    </section>
+    <Card>
+      <CardHeader>
+        <CardTitle>Features</CardTitle>
+        <CardDescription>Toggle sections of your public site on or off.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {FEATURE_KEYS.map(({ key, label, hint }) => (
+          <div key={key} className="flex items-center justify-between">
+            <div>
+              <Label htmlFor={`feat-${key}`}>{label}</Label>
+              <p className="text-sm text-muted-foreground">{hint}</p>
+            </div>
+            <Switch
+              id={`feat-${key}`}
+              checked={features[key] !== false}
+              disabled={saving}
+              onCheckedChange={(v) => toggle(key, v)}
+            />
+          </div>
+        ))}
+      </CardContent>
+    </Card>
   );
 }
 
-function TagManager({
-  tags,
-  reload,
-  onSave,
-}: {
-  tags: Tag[];
-  reload: () => Promise<void>;
-  onSave: (msg: string) => void;
-}) {
+function AppearanceEditor({ config, setConfig }: EditorProps) {
+  const [theme, setTheme] = useState<ThemeConfig>((config.theme as ThemeConfig) || {});
+  const [saving, setSaving] = useState(false);
+  const selected = theme.palette || DEFAULT_PALETTE;
+
+  // Live-preview the palette / custom color on the current page.
+  function previewPalette(id: string) {
+    document.documentElement.setAttribute("data-palette", id);
+    setTheme((t) => ({ ...t, palette: id }));
+  }
+  function previewCustom(hex: string | undefined) {
+    const root = document.documentElement;
+    if (hex) {
+      root.style.setProperty("--primary", hex);
+      root.style.setProperty("--ring", hex);
+      root.style.setProperty("--primary-foreground", "#ffffff");
+    } else {
+      root.style.removeProperty("--primary");
+      root.style.removeProperty("--ring");
+      root.style.removeProperty("--primary-foreground");
+    }
+    setTheme((t) => ({ ...t, customPrimary: hex }));
+  }
+
+  async function save() {
+    setSaving(true);
+    try {
+      const updated = await api.updateConfig({ theme });
+      setConfig(updated);
+      toast.success("Appearance saved");
+    } catch (e) {
+      toast.error(String(e));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Appearance</CardTitle>
+        <CardDescription>
+          Pick a palette — each works in light and dark mode. Visitors can switch mode with the
+          toggle.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div>
+          <Label className="mb-2 block">Palette</Label>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {PALETTES.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => previewPalette(p.id)}
+                className={`flex items-center gap-2 rounded-lg border p-2.5 text-sm transition-colors hover:bg-accent ${
+                  selected === p.id ? "border-primary ring-2 ring-ring" : "border-border"
+                }`}
+              >
+                <span
+                  className="size-5 shrink-0 rounded-full border"
+                  style={{ background: p.swatch }}
+                />
+                {p.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <Label className="mb-2 block">Default mode for new visitors</Label>
+          <div className="flex gap-2">
+            {(["light", "dark", "system"] as const).map((m) => (
+              <Button
+                key={m}
+                type="button"
+                size="sm"
+                variant={(theme.defaultMode || "system") === m ? "default" : "outline"}
+                onClick={() => setTheme((t) => ({ ...t, defaultMode: m }))}
+                className="capitalize"
+              >
+                {m}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <Label className="mb-2 block">Advanced: custom accent color</Label>
+          <div className="flex items-center gap-2">
+            <Input
+              type="color"
+              className="h-10 w-14 p-1"
+              value={theme.customPrimary || "#000000"}
+              onChange={(e) => previewCustom(e.target.value)}
+            />
+            <Input
+              className="max-w-40"
+              placeholder="#3b82f6"
+              value={theme.customPrimary || ""}
+              onChange={(e) => previewCustom(e.target.value || undefined)}
+            />
+            {theme.customPrimary && (
+              <Button variant="ghost" size="sm" onClick={() => previewCustom(undefined)}>
+                Clear
+              </Button>
+            )}
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Overrides the palette&apos;s primary color when set.
+          </p>
+        </div>
+
+        <Button onClick={save} disabled={saving}>
+          Save appearance
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function TagManager({ tags, reload }: { tags: Tag[]; reload: () => Promise<void> }) {
   const [name, setName] = useState("");
 
   async function add() {
     if (!name.trim()) return;
-    await api.createTag(name.trim());
-    setName("");
-    await reload();
-    onSave("Tag added");
+    try {
+      await api.createTag(name.trim());
+      setName("");
+      await reload();
+      toast.success("Tag added");
+    } catch (e) {
+      toast.error(String(e));
+    }
   }
 
   return (
-    <section className="card">
-      <h2>Tags</h2>
-      <div className="row">
-        {tags.map((t) => (
-          <span className="tag" key={t.id}>
-            {t.name}{" "}
-            <button
-              className="danger"
-              style={{ padding: "0 0.3rem", marginLeft: 4 }}
-              onClick={async () => {
-                await api.deleteTag(t.id);
-                await reload();
-              }}
-            >
-              ✕
-            </button>
-          </span>
-        ))}
-      </div>
-      <div className="row" style={{ marginTop: "0.75rem" }}>
-        <input placeholder="New tag" value={name} onChange={(e) => setName(e.target.value)} />
-        <button onClick={add}>Add tag</button>
-      </div>
-    </section>
+    <Card>
+      <CardHeader>
+        <CardTitle>Tags</CardTitle>
+        <CardDescription>Used to categorize and filter publications.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex flex-wrap gap-2">
+          {tags.length === 0 && <p className="text-sm text-muted-foreground">No tags yet.</p>}
+          {tags.map((t) => (
+            <Badge key={t.id} variant="secondary" className="gap-1">
+              {t.name}
+              <button
+                type="button"
+                aria-label={`Delete ${t.name}`}
+                onClick={async () => {
+                  await api.deleteTag(t.id);
+                  await reload();
+                }}
+              >
+                <Trash2 className="size-3" />
+              </button>
+            </Badge>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <Input
+            placeholder="New tag"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && add()}
+            className="max-w-xs"
+          />
+          <Button onClick={add}>Add tag</Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -376,74 +480,103 @@ function PublicationManager({
   pubs,
   tags,
   reload,
-  onSave,
 }: {
   pubs: Publication[];
   tags: Tag[];
   reload: () => Promise<void>;
-  onSave: (msg: string) => void;
 }) {
   const [form, setForm] = useState({ ...EMPTY_PUB });
 
   async function create() {
-    if (!form.title.trim()) return;
-    await api.createPublication({
-      ...form,
-      year: form.year ? Number(form.year) : null,
-    });
-    setForm({ ...EMPTY_PUB });
-    await reload();
-    onSave("Publication added");
+    if (!form.title.trim()) {
+      toast.error("Title is required");
+      return;
+    }
+    try {
+      await api.createPublication({ ...form, year: form.year ? Number(form.year) : null });
+      setForm({ ...EMPTY_PUB });
+      await reload();
+      toast.success("Publication added");
+    } catch (e) {
+      toast.error(String(e));
+    }
   }
 
   return (
-    <section className="card">
-      <h2>Publications</h2>
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>Publications</CardTitle>
+          <CardDescription>{pubs.length} total</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {pubs.length === 0 && <p className="text-sm text-muted-foreground">None yet.</p>}
+          {pubs.map((pub) => (
+            <PublicationRow key={pub.id} pub={pub} tags={tags} reload={reload} />
+          ))}
+        </CardContent>
+      </Card>
 
-      {pubs.map((pub) => (
-        <PublicationRow key={pub.id} pub={pub} tags={tags} reload={reload} onSave={onSave} />
-      ))}
-
-      <h3>Add publication</h3>
-      <label>Title</label>
-      <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-      <div className="row">
-        <div style={{ flex: 1 }}>
-          <label>Authors</label>
-          <input value={form.authors} onChange={(e) => setForm({ ...form, authors: e.target.value })} />
-        </div>
-        <div style={{ width: 90 }}>
-          <label>Year</label>
-          <input value={form.year} onChange={(e) => setForm({ ...form, year: e.target.value })} />
-        </div>
-      </div>
-      <label>Venue</label>
-      <input value={form.venue} onChange={(e) => setForm({ ...form, venue: e.target.value })} />
-      <label>Abstract</label>
-      <textarea
-        rows={3}
-        value={form.abstract}
-        onChange={(e) => setForm({ ...form, abstract: e.target.value })}
-      />
-      <div className="row">
-        <div style={{ flex: 1 }}>
-          <label>DOI</label>
-          <input value={form.doi} onChange={(e) => setForm({ ...form, doi: e.target.value })} />
-        </div>
-        <div style={{ flex: 1 }}>
-          <label>URL</label>
-          <input value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} />
-        </div>
-      </div>
-      <TagPicker
-        tags={tags}
-        selected={form.tag_ids}
-        onChange={(ids) => setForm({ ...form, tag_ids: ids })}
-      />
-      <div style={{ marginTop: "1rem" }}>
-        <button onClick={create}>Add publication</button>
-      </div>
-    </section>
+      <Card>
+        <CardHeader>
+          <CardTitle>Add publication</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Field label="Title">
+            <Input
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+            />
+          </Field>
+          <div className="grid gap-4 sm:grid-cols-[1fr_120px]">
+            <Field label="Authors">
+              <Input
+                value={form.authors}
+                onChange={(e) => setForm({ ...form, authors: e.target.value })}
+              />
+            </Field>
+            <Field label="Year">
+              <Input
+                value={form.year}
+                onChange={(e) => setForm({ ...form, year: e.target.value })}
+              />
+            </Field>
+          </div>
+          <Field label="Venue">
+            <Input
+              value={form.venue}
+              onChange={(e) => setForm({ ...form, venue: e.target.value })}
+            />
+          </Field>
+          <Field label="Abstract">
+            <Textarea
+              rows={3}
+              value={form.abstract}
+              onChange={(e) => setForm({ ...form, abstract: e.target.value })}
+            />
+          </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="DOI">
+              <Input value={form.doi} onChange={(e) => setForm({ ...form, doi: e.target.value })} />
+            </Field>
+            <Field label="URL">
+              <Input value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} />
+            </Field>
+          </div>
+          <div>
+            <Label className="mb-2 block">Tags</Label>
+            <TagPicker
+              tags={tags}
+              selected={form.tag_ids}
+              onChange={(ids) => setForm({ ...form, tag_ids: ids })}
+            />
+          </div>
+          <Button onClick={create}>
+            <Plus className="size-4" /> Add publication
+          </Button>
+        </CardContent>
+      </Card>
+    </>
   );
 }
 
@@ -451,17 +584,15 @@ function PublicationRow({
   pub,
   tags,
   reload,
-  onSave,
 }: {
   pub: Publication;
   tags: Tag[];
   reload: () => Promise<void>;
-  onSave: (msg: string) => void;
 }) {
   const [busy, setBusy] = useState(false);
   const selected = pub.tags.map((t) => t.id);
 
-  async function setTags(ids: number[]) {
+  async function setPubTags(ids: number[]) {
     await api.updatePublication(pub.id, { tag_ids: ids });
     await reload();
   }
@@ -471,18 +602,26 @@ function PublicationRow({
     try {
       await api.uploadPaper(pub.id, file);
       await reload();
-      onSave("PDF uploaded");
+      toast.success("PDF uploaded");
+    } catch (e) {
+      toast.error(String(e));
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <div className="pub">
-      <div className="row" style={{ justifyContent: "space-between" }}>
-        <strong>{pub.title}</strong>
-        <button
-          className="danger"
+    <div className="rounded-lg border p-3">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="font-medium">{pub.title}</p>
+          <p className="text-sm text-muted-foreground">
+            {[pub.authors, pub.venue, pub.year].filter(Boolean).join(" · ")}
+          </p>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={async () => {
             if (confirm("Delete this publication?")) {
               await api.deletePublication(pub.id);
@@ -490,21 +629,25 @@ function PublicationRow({
             }
           }}
         >
-          Delete
-        </button>
+          <Trash2 className="size-4 text-destructive" />
+        </Button>
       </div>
-      <p className="pub-meta">{[pub.authors, pub.venue, pub.year].filter(Boolean).join(" · ")}</p>
-      <TagPicker tags={tags} selected={selected} onChange={setTags} />
-      <div className="row" style={{ marginTop: "0.5rem" }}>
+      <div className="mt-2">
+        <TagPicker tags={tags} selected={selected} onChange={setPubTags} />
+      </div>
+      <div className="mt-2 flex items-center gap-2">
         {pub.file_url && (
-          <a href={pub.file_url} target="_blank" rel="noreferrer">
-            Current PDF
-          </a>
+          <Button asChild variant="outline" size="sm">
+            <a href={pub.file_url} target="_blank" rel="noreferrer">
+              Current PDF
+            </a>
+          </Button>
         )}
-        <input
+        <Input
           type="file"
           accept="application/pdf"
           disabled={busy}
+          className="max-w-xs"
           onChange={(e) => e.target.files?.[0] && uploadPdf(e.target.files[0])}
         />
       </div>
@@ -521,25 +664,35 @@ function TagPicker({
   selected: number[];
   onChange: (ids: number[]) => void;
 }) {
+  if (tags.length === 0) {
+    return <p className="text-sm text-muted-foreground">No tags yet — add some first.</p>;
+  }
   return (
-    <div className="row" style={{ marginTop: "0.5rem" }}>
-      {tags.length === 0 && <span className="muted">No tags yet — add some above.</span>}
+    <div className="flex flex-wrap gap-1.5">
       {tags.map((t) => {
         const on = selected.includes(t.id);
         return (
-          <button
+          <Badge
             key={t.id}
-            type="button"
-            className={on ? "" : "secondary"}
-            style={{ padding: "0.2rem 0.6rem", fontSize: "0.8rem" }}
+            variant={on ? "default" : "outline"}
+            className="cursor-pointer"
             onClick={() =>
               onChange(on ? selected.filter((id) => id !== t.id) : [...selected, t.id])
             }
           >
             {t.name}
-          </button>
+          </Badge>
         );
       })}
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      {children}
     </div>
   );
 }

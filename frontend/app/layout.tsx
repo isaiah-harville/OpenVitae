@@ -1,40 +1,51 @@
 import type { Metadata } from "next";
-import "./globals.css";
+import { Inter } from "next/font/google";
+import type { CSSProperties } from "react";
+import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
 import { getSiteConfig } from "@/lib/api";
+import { DEFAULT_PALETTE, type ThemeConfig } from "@/lib/palettes";
+import "./globals.css";
+
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
   title: "OpenVitae",
   description: "Config-driven CV website and publication manager",
 };
 
-const VAR_MAP: Record<string, string> = {
-  primary: "--ov-primary",
-  secondary: "--ov-secondary",
-  accent: "--ov-accent",
-  background: "--ov-background",
-  text: "--ov-text",
-  font: "--ov-font",
-};
-
-function themeStyle(theme: Record<string, string>): string {
-  const lines = Object.entries(theme)
-    .filter(([k]) => VAR_MAP[k])
-    .map(([k, v]) => `${VAR_MAP[k]}: ${v};`);
-  return `:root{${lines.join("")}}`;
-}
-
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  let css = "";
+  let theme: ThemeConfig = {};
   try {
     const config = await getSiteConfig();
-    css = themeStyle(config.theme || {});
+    theme = (config.theme as ThemeConfig) ?? {};
   } catch {
-    // Backend unavailable — fall back to the defaults in globals.css.
+    // Backend unavailable — fall back to defaults.
   }
+
+  const palette = theme.palette || DEFAULT_PALETTE;
+  const defaultMode = theme.defaultMode || "system";
+  const customStyle: CSSProperties | undefined = theme.customPrimary
+    ? ({
+        "--primary": theme.customPrimary,
+        "--ring": theme.customPrimary,
+        "--primary-foreground": "#ffffff",
+      } as CSSProperties)
+    : undefined;
+
   return (
-    <html lang="en">
-      <head>{css && <style dangerouslySetInnerHTML={{ __html: css }} />}</head>
-      <body>{children}</body>
+    <html lang="en" data-palette={palette} style={customStyle} suppressHydrationWarning>
+      <body className={`${inter.variable} font-sans antialiased`}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme={defaultMode}
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+          <Toaster richColors position="top-center" />
+        </ThemeProvider>
+      </body>
     </html>
   );
 }
