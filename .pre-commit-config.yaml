@@ -1,0 +1,57 @@
+# Pre-commit hooks for OpenVitae.
+#
+#   Install once:  pipx install pre-commit   (or: uv tool install pre-commit)
+#                  pre-commit install
+#   Run manually:  pre-commit run --all-files
+#
+# Backend is linted/formatted with ruff; frontend with Biome (via bun); uv keeps the
+# backend lockfile in sync — matching the project toolchain.
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: \.lock$
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: mixed-line-ending
+        args: [--fix=lf]
+
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.38.0
+    hooks:
+      - id: yamllint
+        args:
+          - -s
+          - -d
+          - "{extends: relaxed, rules: {brackets: disable, line-length: {max: 112}}}"
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.9
+    hooks:
+      - id: ruff-check
+        files: ^backend/.*\.py$
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+        files: ^backend/.*\.py$
+
+  - repo: local
+    hooks:
+      # uv project lives in backend/, so run uv there rather than at the repo root.
+      - id: uv-lock
+        name: uv lock (backend)
+        language: system
+        entry: bash -c 'cd backend && uv lock'
+        pass_filenames: false
+        files: ^backend/(pyproject\.toml|uv\.lock)$
+
+      - id: biome
+        name: biome check (frontend)
+        language: system
+        entry: bash -c 'cd frontend && bunx biome check --write .'
+        pass_filenames: false
+        files: ^frontend/.*\.(ts|tsx|js|jsx|json|jsonc|css)$

@@ -47,8 +47,7 @@ Frontend `:3000`, API `:8000` (`/docs`), MinIO console `:9001`. Reset all data:
 ## Workflow
 
 - Commit with conventional-commit messages and the `Co-Authored-By` trailer.
-- Work happens on the `init` branch (main is the default/PR target).
-- Roadmap and future work are tracked as GitHub issues (#3–#12). Helm chart is #8.
+- Never hand-write migrations.
 
 ## License
 
