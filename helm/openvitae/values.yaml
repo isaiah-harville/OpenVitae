@@ -9,6 +9,21 @@ global:
 nameOverride: ""
 fullnameOverride: ""
 
+# Pull secrets for private images (applied to every pod). e.g.
+# imagePullSecrets:
+#   - name: ghcr-pull-secret
+imagePullSecrets: []
+
+# Any extra API environment variables — i.e. the rest of the app's `.env`. These
+# are merged into the API config and OVERRIDE the chart-derived values when the
+# keys collide, so anything in backend/.env.example (or app/config.py) is settable
+# here even if it has no dedicated value above. For secret values, prefer
+# `existingSecret` or Flux `valuesFrom` over putting plaintext here.
+extraEnv: {}
+#   ENVIRONMENT: production
+#   PRESIGNED_URL_EXPIRE_SECONDS: "3600"
+#   APP_NAME: "Jane Doe — CV"
+
 # Browser-reachable base URL for object storage (presigned headshot/PDF links
 # are opened directly by the visitor's browser, NOT proxied through the app).
 # REQUIRED in any real deployment — e.g. the MinIO ingress host, or your S3/CDN
@@ -55,6 +70,8 @@ frontend:
   service:
     type: ClusterIP
     port: 3000
+  # Extra frontend env vars (e.g. NEXT_PUBLIC_API_URL to bypass the /api proxy).
+  extraEnv: {}
   podSecurityContext: {}
   securityContext: {}
   nodeSelector: {}
