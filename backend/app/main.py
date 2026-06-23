@@ -6,7 +6,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from .config import get_settings
 from .database import SessionLocal
 from .db_migrate import run_migrations
-from .routers import auth, backup, imports, projects, publications, site, tags, talks, uploads
+from .routers import (
+    auth,
+    backup,
+    imports,
+    projects,
+    publications,
+    site,
+    skills,
+    tags,
+    talks,
+    uploads,
+)
 from .seed import seed
 from .storage import ensure_bucket
 
@@ -45,6 +56,7 @@ app.include_router(tags.router)
 app.include_router(publications.router)
 app.include_router(talks.router)
 app.include_router(projects.router)
+app.include_router(skills.router)
 app.include_router(uploads.router)
 app.include_router(backup.router)
 app.include_router(imports.router)
