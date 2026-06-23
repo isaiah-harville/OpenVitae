@@ -181,3 +181,21 @@ ingress:
   # Separate host for object storage (so presigned URLs are browser-reachable).
   # When set, the chart also points publicS3Url at https/http://<s3Host>.
   s3Host: ""
+  # External forward-auth (Authelia / Authentik / oauth2-proxy) for the admin
+  # surface — use together with auth.mode=proxy. When non-empty, the chart
+  # renders a SECOND Ingress that guards `protectedPaths` on the main host with
+  # these annotations, so ONLY /admin (and the /api calls the admin browser
+  # makes) require the proxy. The public site and the S3 host stay anonymous and
+  # don't depend on the proxy being reachable. Your proxy MUST strip/overwrite
+  # inbound identity headers (e.g. Remote-Email) so visitors can't spoof them —
+  # forward-auth middlewares that set authResponseHeaders do this for you.
+  # Traefik + Authelia example:
+  #   protectedAnnotations:
+  #     traefik.ingress.kubernetes.io/router.middlewares: apps-authelia-forwardauth@kubernetescrd
+  protectedAnnotations: {}
+  # Paths routed to the protected Ingress when protectedAnnotations is set. The
+  # admin UI is served at /admin; the admin browser calls the API same-origin at
+  # /api (public page rendering uses the API server-side, not these routes).
+  protectedPaths:
+    - /admin
+    - /api

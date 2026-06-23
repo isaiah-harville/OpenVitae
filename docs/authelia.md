@@ -19,11 +19,21 @@ The built-in JWT login remains the default — set `AUTH_MODE=proxy` to switch.
 4. The admin UI hides its password form (it queries `GET /api/auth/mode`) and the
    `/api/auth/login` endpoint is disabled.
 
-> **Important — route `/api` through the proxy.** The trusted headers must reach the API.
-> Expose the **API** through the same Authelia-protected proxy and point the browser at it
-> directly with `NEXT_PUBLIC_API_URL=https://your-host/api` (rather than the same-origin
-> Next.js proxy). Make sure the proxy **strips inbound `Remote-*` headers** from clients so
-> they can't be spoofed — only Authelia should set them.
+> **Important — the trusted headers must reach the API, and visitors must not be able to
+> forge them.**
+>
+> - **Gate `/admin` *and* `/api`.** The admin browser calls the API same-origin at `/api`
+>   (the Next.js frontend forwards those requests — including `Remote-*` — to the API), so
+>   the forward-auth proxy must cover both paths. The public site fetches its data
+>   server-side over the internal network and serves files via presigned object-storage
+>   URLs, so it never uses the browser `/api` route — gating `/api` does not affect public
+>   visitors. (If you bypass the same-origin proxy with `NEXT_PUBLIC_API_URL`, protect that
+>   API origin instead.)
+> - **Strip inbound `Remote-*` headers.** Because the API trusts these headers in proxy
+>   mode, the proxy must overwrite them on every request so a client can't spoof
+>   `Remote-Email`. Authelia forward-auth does this for the headers listed in
+>   `authResponseHeaders`; ensure all of `PROXY_AUTH_EMAIL_HEADER` / `PROXY_AUTH_GROUPS_HEADER`
+>   are listed there.
 
 ## Configuration
 
@@ -46,33 +56,64 @@ NEXT_PUBLIC_API_URL=https://cv.example.com/api
 
 ### Helm
 
+Set `auth.mode: proxy` and hand the chart your forward-auth annotation via
+`ingress.protectedAnnotations`. The chart then renders a **second Ingress** that guards only
+the admin surface (`/admin` + `/api`) with that annotation, while the public site and the S3
+host stay anonymous — so public visitors don't depend on the auth proxy at all.
+
 ```yaml
 auth:
   mode: proxy
   proxy:
+    # Optional extra in-app check on top of the proxy's own access rules.
     requiredGroup: openvitae-admins
-frontend:
-  extraEnv:
-    NEXT_PUBLIC_API_URL: https://cv.example.com/api
+ingress:
+  enabled: true
+  className: traefik
+  host: cv.example.com
+  s3Host: cv-s3.example.com
+  # Applied to the generated /admin + /api Ingress only.
+  protectedAnnotations:
+    traefik.ingress.kubernetes.io/router.middlewares: apps-authelia-forwardauth@kubernetescrd
 ```
+
+No `NEXT_PUBLIC_API_URL` override is needed: the browser stays same-origin, the gated `/api`
+route carries `Remote-*` through the frontend to the API.
 
 ## Example: Traefik + Authelia
 
+A reusable forward-auth `Middleware` (here in the `apps` namespace; reference it as
+`apps-authelia-forwardauth@kubernetescrd`):
+
 ```yaml
-# Traefik dynamic config (middleware)
-http:
-  middlewares:
-    authelia:
-      forwardAuth:
-        address: http://authelia:9091/api/authz/forward-auth
-        trustForwardHeader: true
-        authResponseHeaders:
-          - Remote-User
-          - Remote-Name
-          - Remote-Email
-          - Remote-Groups
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: authelia-forwardauth
+  namespace: apps
+spec:
+  forwardAuth:
+    address: http://authelia.apps.svc.cluster.local/api/authz/forward-auth
+    trustForwardHeader: true
+    authResponseHeaders:
+      - Remote-User
+      - Remote-Name
+      - Remote-Email
+      - Remote-Groups
 ```
 
-Attach the `authelia` middleware to both the frontend and `/api` routers. Authelia's own
-access-control rules decide who may reach the site; `PROXY_AUTH_REQUIRED_GROUP` is an extra
-in-app check.
+Because the chart only routes `/admin` + `/api` through this middleware, Authelia's
+`access_control` needs a single rule for the site host — no per-path bypass entries:
+
+```yaml
+access_control:
+  default_policy: deny
+  rules:
+    - domain: cv.example.com
+      policy: one_factor
+      # Restrict to the CV owner (or use a group with PROXY_AUTH_REQUIRED_GROUP).
+      subject:
+        - user:you
+```
+
+`PROXY_AUTH_REQUIRED_GROUP` is an optional extra in-app check on top of this.
