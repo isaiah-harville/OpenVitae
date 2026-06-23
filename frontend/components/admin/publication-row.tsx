@@ -209,21 +209,26 @@ export function PublicationRow({
           ))}
         </div>
       )}
-      <div className="mt-2 flex items-center gap-2">
-        {pub.file_url && (
-          <Button asChild variant="outline" size="sm">
-            <a href={pub.file_url} target="_blank" rel="noreferrer">
-              Current PDF
-            </a>
-          </Button>
-        )}
-        <Input
-          type="file"
-          accept="application/pdf"
-          disabled={busy}
-          className="max-w-xs"
-          onChange={(e) => e.target.files?.[0] && uploadPdf(e.target.files[0])}
-        />
+      <div className="mt-3 space-y-1.5">
+        <Label className="text-xs text-muted-foreground">
+          {pub.file_url ? "Replace PDF" : "Attach a PDF — e.g. for unpublished or non-public work"}
+        </Label>
+        <div className="flex items-center gap-2">
+          {pub.file_url && (
+            <Button asChild variant="outline" size="sm">
+              <a href={pub.file_url} target="_blank" rel="noreferrer">
+                Current PDF
+              </a>
+            </Button>
+          )}
+          <Input
+            type="file"
+            accept="application/pdf"
+            disabled={busy}
+            className="max-w-xs"
+            onChange={(e) => e.target.files?.[0] && uploadPdf(e.target.files[0])}
+          />
+        </div>
       </div>
     </div>
   );

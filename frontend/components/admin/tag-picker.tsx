@@ -17,11 +17,17 @@ export function TagPicker({
     <div className="flex flex-wrap gap-1.5">
       {tags.map((t) => {
         const on = selected.includes(t.id);
+        const style = t.color
+          ? on
+            ? { backgroundColor: t.color, borderColor: t.color, color: "#fff" }
+            : { borderColor: t.color, color: t.color }
+          : undefined;
         return (
           <Badge
             key={t.id}
             variant={on ? "default" : "outline"}
             className="cursor-pointer"
+            style={style}
             onClick={() =>
               onChange(on ? selected.filter((id) => id !== t.id) : [...selected, t.id])
             }

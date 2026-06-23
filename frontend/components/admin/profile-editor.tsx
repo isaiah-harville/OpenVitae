@@ -75,6 +75,16 @@ export function ProfileEditor({ config, setConfig }: EditorProps) {
           onProfile={mergeGithub}
           onHeadshot={(url) => setConfig({ ...config, headshot_url: url })}
         />
+        <Field label="Site title">
+          <Input
+            value={p.siteName || ""}
+            placeholder={p.name || "OpenVitae"}
+            onChange={(e) => setP({ ...p, siteName: e.target.value })}
+          />
+          <p className="text-sm text-muted-foreground">
+            Title used for the browser tab and when your link is shared. Defaults to your name.
+          </p>
+        </Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Name">
             <Input value={p.name || ""} onChange={(e) => setP({ ...p, name: e.target.value })} />

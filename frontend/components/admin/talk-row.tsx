@@ -1,17 +1,31 @@
 "use client";
 
-import { Pencil, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Field } from "@/components/admin/field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { Talk } from "@/lib/api";
 import { api } from "@/lib/client";
 
-export function TalkRow({ talk, reload }: { talk: Talk; reload: () => Promise<void> }) {
+export function TalkRow({
+  talk,
+  reload,
+  onMove,
+  isFirst,
+  isLast,
+}: {
+  talk: Talk;
+  reload: () => Promise<void>;
+  onMove?: (delta: number) => void;
+  isFirst?: boolean;
+  isLast?: boolean;
+}) {
   const [editing, setEditing] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [draft, setDraft] = useState({
     title: talk.title,
     event: talk.event || "",
@@ -29,6 +43,19 @@ export function TalkRow({ talk, reload }: { talk: Talk; reload: () => Promise<vo
       toast.success("Talk updated");
     } catch (e) {
       toast.error(String(e));
+    }
+  }
+
+  async function uploadFile(file: File) {
+    setBusy(true);
+    try {
+      await api.uploadTalkFile(talk.id, file);
+      await reload();
+      toast.success("Slides uploaded");
+    } catch (e) {
+      toast.error(String(e));
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -88,30 +115,75 @@ export function TalkRow({ talk, reload }: { talk: Talk; reload: () => Promise<vo
   }
 
   return (
-    <div className="flex items-start justify-between gap-2 rounded-lg border p-3">
-      <div className="min-w-0">
-        <p className="font-medium">{talk.title}</p>
-        <p className="text-sm text-muted-foreground">
-          {[talk.event, talk.location, talk.event_date].filter(Boolean).join(" · ")}
-        </p>
+    <div className="rounded-lg border p-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="font-medium">{talk.title}</p>
+          <p className="text-sm text-muted-foreground">
+            {[talk.event, talk.location, talk.event_date].filter(Boolean).join(" · ")}
+          </p>
+        </div>
+        <div className="flex shrink-0">
+          {onMove && (
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Move up"
+                disabled={isFirst}
+                onClick={() => onMove(-1)}
+              >
+                <ChevronUp className="size-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Move down"
+                disabled={isLast}
+                onClick={() => onMove(1)}
+              >
+                <ChevronDown className="size-4" />
+              </Button>
+            </>
+          )}
+          <Button variant="ghost" size="icon" aria-label="Edit" onClick={() => setEditing(true)}>
+            <Pencil className="size-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Delete"
+            onClick={async () => {
+              if (confirm("Delete this talk?")) {
+                await api.deleteTalk(talk.id);
+                await reload();
+              }
+            }}
+          >
+            <Trash2 className="size-4 text-destructive" />
+          </Button>
+        </div>
       </div>
-      <div className="flex shrink-0">
-        <Button variant="ghost" size="icon" aria-label="Edit" onClick={() => setEditing(true)}>
-          <Pencil className="size-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="Delete"
-          onClick={async () => {
-            if (confirm("Delete this talk?")) {
-              await api.deleteTalk(talk.id);
-              await reload();
-            }
-          }}
-        >
-          <Trash2 className="size-4 text-destructive" />
-        </Button>
+      <div className="mt-3 space-y-1.5">
+        <Label className="text-xs text-muted-foreground">
+          {talk.file_url ? "Replace slides" : "Attach slides (PDF or slide deck)"}
+        </Label>
+        <div className="flex items-center gap-2">
+          {talk.file_url && (
+            <Button asChild variant="outline" size="sm">
+              <a href={talk.file_url} target="_blank" rel="noreferrer">
+                Current slides
+              </a>
+            </Button>
+          )}
+          <Input
+            type="file"
+            accept=".pdf,.ppt,.pptx,.odp"
+            disabled={busy}
+            className="max-w-xs"
+            onChange={(e) => e.target.files?.[0] && uploadFile(e.target.files[0])}
+          />
+        </div>
       </div>
     </div>
   );

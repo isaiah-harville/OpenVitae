@@ -1,5 +1,5 @@
 import { ExternalLink, FileText, Star } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { TagChip } from "@/components/public/tag-chip";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { Publication } from "@/lib/api";
@@ -19,9 +19,7 @@ export function PublicationCard({ pub }: { pub: Publication }) {
         {pub.tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5 pt-1">
             {pub.tags.map((t) => (
-              <Badge key={t.id} variant="secondary">
-                {t.name}
-              </Badge>
+              <TagChip key={t.id} tag={t} />
             ))}
           </div>
         )}
