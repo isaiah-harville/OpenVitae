@@ -1,3 +1,15 @@
+{{- $data := dict
+  "ACCESS_TOKEN_EXPIRE_MINUTES" (.Values.auth.accessTokenExpireMinutes | toString)
+  "ADMIN_EMAIL" .Values.auth.admin.email
+  "S3_ENDPOINT_URL" (include "openvitae.s3Endpoint" .)
+  "S3_PUBLIC_ENDPOINT_URL" (include "openvitae.s3PublicUrl" .)
+  "S3_BUCKET" (include "openvitae.s3Bucket" .)
+  "S3_REGION" (include "openvitae.s3Region" .)
+  "CORS_ORIGINS" (include "openvitae.corsOrigins" .)
+-}}
+{{- range $k, $v := .Values.extraEnv }}
+{{- $_ := set $data $k ($v | toString) }}
+{{- end }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -5,10 +17,6 @@ metadata:
   labels:
     {{- include "openvitae.labels" . | nindent 4 }}
 data:
-  ACCESS_TOKEN_EXPIRE_MINUTES: {{ .Values.auth.accessTokenExpireMinutes | quote }}
-  ADMIN_EMAIL: {{ .Values.auth.admin.email | quote }}
-  S3_ENDPOINT_URL: {{ include "openvitae.s3Endpoint" . | quote }}
-  S3_PUBLIC_ENDPOINT_URL: {{ include "openvitae.s3PublicUrl" . | quote }}
-  S3_BUCKET: {{ include "openvitae.s3Bucket" . | quote }}
-  S3_REGION: {{ include "openvitae.s3Region" . | quote }}
-  CORS_ORIGINS: {{ include "openvitae.corsOrigins" . | quote }}
+  {{- range $k, $v := $data }}
+  {{ $k }}: {{ $v | quote }}
+  {{- end }}

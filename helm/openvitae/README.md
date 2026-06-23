@@ -100,6 +100,29 @@ helm install openvitae ./helm/openvitae \
 
 With `ingress.s3Host` set, `publicS3Url` defaults to that host automatically.
 
+## Environment / `.env`
+
+Every variable from the app's `.env` is configurable. The common ones have
+dedicated values (`auth.*`, `corsOrigins`, the `postgres`/`minio`/`externalS3`
+blocks, ingress-derived `S3_*`/`CORS_ORIGINS`). Anything else — or any future
+key — goes through `extraEnv`, which is merged into the API config and overrides
+the chart-derived values on a key clash:
+
+```yaml
+extraEnv:
+  ENVIRONMENT: production
+  PRESIGNED_URL_EXPIRE_SECONDS: "3600"
+  APP_NAME: "Jane Doe — CV"
+
+frontend:
+  extraEnv:
+    NEXT_PUBLIC_API_URL: https://api.example.com   # bypass the /api proxy
+```
+
+Non-secret env lands in a ConfigMap; secret env (`JWT_SECRET`, `ADMIN_PASSWORD`,
+`DATABASE_URL`, S3 keys) lands in a Secret — supply those via `existingSecret`
+or, under Flux, `valuesFrom` (so nothing sensitive sits in plaintext values).
+
 ## Secrets
 
 Sensitive env (`DATABASE_URL`, `JWT_SECRET`, `ADMIN_PASSWORD`, S3 keys) is
