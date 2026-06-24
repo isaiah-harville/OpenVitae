@@ -1,8 +1,11 @@
 {{- if .Values.ingress.enabled }}
+{{- $fullName := include "openvitae.fullname" . }}
+{{- $frontendSvc := include "openvitae.frontend.fullname" . }}
+{{- $frontendPort := .Values.frontend.service.port }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "openvitae.fullname" . }}
+  name: {{ $fullName }}
   labels:
     {{- include "openvitae.labels" . | nindent 4 }}
   {{- with .Values.ingress.annotations }}
@@ -30,9 +33,9 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: {{ include "openvitae.frontend.fullname" . }}
+                name: {{ $frontendSvc }}
                 port:
-                  number: {{ .Values.frontend.service.port }}
+                  number: {{ $frontendPort }}
     {{- if and .Values.ingress.s3Host .Values.minio.enabled }}
     # Object storage on its own host so presigned headshot/PDF URLs resolve
     # from the visitor's browser. Point publicS3Url / S3_PUBLIC_ENDPOINT_URL here.
@@ -47,4 +50,54 @@ spec:
                 port:
                   number: 9000
     {{- end }}
+{{- if .Values.ingress.protectedAnnotations }}
+---
+# Forward-auth split (auth.mode=proxy). The admin surface — /admin and the API
+# the admin browser calls same-origin at /api — is guarded by an external auth
+# proxy (Authelia / Authentik / oauth2-proxy) via `ingress.protectedAnnotations`,
+# while the public site and the S3 host above stay anonymous. The ingress
+# controller routes these more-specific paths here (higher priority than "/"),
+# so only the admin surface ever reaches the auth proxy. Public visitors don't
+# depend on the proxy being up, and presigned S3 URLs keep resolving.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $fullName }}-protected
+  labels:
+    {{- include "openvitae.labels" . | nindent 4 }}
+  annotations:
+    {{- /* Carry the base ingress annotations (entrypoints, etc.) minus the
+           homepage widget hints, then layer the auth-proxy annotations. */}}
+    {{- range $k, $v := .Values.ingress.annotations }}
+    {{- if not (hasPrefix "gethomepage.dev/" $k) }}
+    {{ $k }}: {{ $v | quote }}
+    {{- end }}
+    {{- end }}
+    {{- range $k, $v := .Values.ingress.protectedAnnotations }}
+    {{ $k }}: {{ $v | quote }}
+    {{- end }}
+spec:
+  {{- with .Values.ingress.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- if .Values.ingress.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ .Values.ingress.host | quote }}
+      secretName: {{ .Values.ingress.tls.secretName }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          {{- range .Values.ingress.protectedPaths }}
+          - path: {{ . | quote }}
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $frontendSvc }}
+                port:
+                  number: {{ $frontendPort }}
+          {{- end }}
+{{- end }}
 {{- end }}

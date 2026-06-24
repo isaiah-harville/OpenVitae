@@ -13,6 +13,7 @@ const FEATURE_KEYS: { key: string; label: string; hint: string }[] = [
   { key: "publications", label: "Publications", hint: "Show the publications list." },
   { key: "talks", label: "Talks", hint: "Show the talks section." },
   { key: "projects", label: "Projects", hint: "Show the personal projects section." },
+  { key: "skills", label: "Skills", hint: "Show the skills section." },
   { key: "contact", label: "Contact", hint: "Show email and links." },
   { key: "headshot", label: "Headshot", hint: "Show your photo." },
 ];

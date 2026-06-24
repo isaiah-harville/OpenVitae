@@ -9,7 +9,16 @@ export const SERVER_API_URL =
   process.env.SERVER_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 export const PUBLIC_API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
-export type Tag = { id: number; name: string; slug: string };
+export type Tag = { id: number; name: string; slug: string; color?: string | null };
+
+export type Skill = {
+  id: number;
+  name: string;
+  slug: string;
+  category?: string | null;
+  color?: string | null;
+  sort_order: number;
+};
 
 export type Publication = {
   id: number;
@@ -36,20 +45,27 @@ export type Talk = {
   url?: string | null;
   description?: string | null;
   sort_order: number;
+  file_url?: string | null;
 };
 
 export type Project = {
   id: number;
   name: string;
+  slug: string;
   description?: string | null;
+  content?: string | null;
   url?: string | null;
   source_url?: string | null;
   sort_order: number;
+  tags: Tag[];
+  skills: Skill[];
+  screenshot_urls: string[];
 };
 
 export type SiteConfig = {
   profile: {
     name?: string;
+    siteName?: string;
     title?: string;
     bio?: string;
     location?: string;
@@ -87,7 +103,18 @@ export const getPublications = (params?: {
 };
 export const getTalks = () => getJSON<Talk[]>(SERVER_API_URL, "/api/talks");
 export const getProjects = () => getJSON<Project[]>(SERVER_API_URL, "/api/projects");
+export const getProject = (slug: string) =>
+  getJSON<Project>(SERVER_API_URL, `/api/projects/${encodeURIComponent(slug)}`);
 export const getTags = () => getJSON<Tag[]>(SERVER_API_URL, "/api/tags");
+export const getSkills = () => getJSON<Skill[]>(SERVER_API_URL, "/api/skills");
+
+/**
+ * Title for the browser tab and shared-link metadata (OpenGraph): explicit siteName,
+ * else the profile name, else the product default. On-site UI labels stay "OpenVitae".
+ */
+export function siteName(config: Pick<SiteConfig, "profile"> | null | undefined): string {
+  return config?.profile?.siteName?.trim() || config?.profile?.name?.trim() || "OpenVitae";
+}
 
 // ---- Client-side auth helper ----
 export function authHeaders(): HeadersInit {

@@ -21,6 +21,7 @@ yarn-error.log*
 dist/
 build/
 *.log
+*.tsbuildinfo
 
 # OS / editor
 .DS_Store

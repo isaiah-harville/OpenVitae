@@ -21,6 +21,7 @@ DEFAULT_FEATURES = {
     "headshot": True,
     "talks": False,
     "projects": False,
+    "skills": False,
 }
 
 DEFAULT_PROFILE = {

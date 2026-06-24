@@ -1,12 +1,19 @@
 {{- $data := dict
   "ACCESS_TOKEN_EXPIRE_MINUTES" (.Values.auth.accessTokenExpireMinutes | toString)
   "ADMIN_EMAIL" .Values.auth.admin.email
+  "AUTH_MODE" (.Values.auth.mode | default "jwt")
   "S3_ENDPOINT_URL" (include "openvitae.s3Endpoint" .)
   "S3_PUBLIC_ENDPOINT_URL" (include "openvitae.s3PublicUrl" .)
   "S3_BUCKET" (include "openvitae.s3Bucket" .)
   "S3_REGION" (include "openvitae.s3Region" .)
   "CORS_ORIGINS" (include "openvitae.corsOrigins" .)
 -}}
+{{- with .Values.auth.proxy }}
+{{- $_ := set $data "PROXY_AUTH_EMAIL_HEADER" (.emailHeader | default "Remote-Email") }}
+{{- $_ := set $data "PROXY_AUTH_GROUPS_HEADER" (.groupsHeader | default "Remote-Groups") }}
+{{- $_ := set $data "PROXY_AUTH_REQUIRED_GROUP" (.requiredGroup | default "") }}
+{{- $_ := set $data "PROXY_AUTH_AUTO_PROVISION" (.autoProvision | default true | toString) }}
+{{- end }}
 {{- range $k, $v := .Values.extraEnv }}
 {{- $_ := set $data $k ($v | toString) }}
 {{- end }}

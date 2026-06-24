@@ -1,5 +1,6 @@
-import { Code, ExternalLink } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ArrowRight } from "lucide-react";
+import Link from "next/link";
+import { TagChip } from "@/components/public/tag-chip";
 import { Card, CardContent } from "@/components/ui/card";
 import type { Project } from "@/lib/api";
 
@@ -10,32 +11,42 @@ export function ProjectsList({ projects }: { projects: Project[] }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       {projects.map((project) => (
-        <Card key={project.id} className="surface-card">
-          <CardContent className="space-y-2">
-            <h3 className="font-semibold leading-snug">{project.name}</h3>
-            {project.description && (
-              <p className="text-sm leading-relaxed text-muted-foreground">{project.description}</p>
+        <Link
+          key={project.id}
+          href={`/projects/${project.slug}`}
+          className="group block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <Card className="surface-card h-full overflow-hidden transition-colors group-hover:border-primary/50">
+            {project.screenshot_urls[0] && (
+              <img
+                src={project.screenshot_urls[0]}
+                alt=""
+                className="aspect-video w-full object-cover"
+              />
             )}
-            {(project.url || project.source_url) && (
-              <div className="flex flex-wrap gap-2 pt-1">
-                {project.url && (
-                  <Button asChild size="sm" variant="outline">
-                    <a href={project.url} target="_blank" rel="noreferrer">
-                      <ExternalLink className="size-4" /> Visit
-                    </a>
-                  </Button>
-                )}
-                {project.source_url && (
-                  <Button asChild size="sm" variant="ghost">
-                    <a href={project.source_url} target="_blank" rel="noreferrer">
-                      <Code className="size-4" /> Source
-                    </a>
-                  </Button>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+            <CardContent className="space-y-2">
+              <h3 className="flex items-center gap-1 font-semibold leading-snug">
+                {project.name}
+                <ArrowRight className="size-4 -translate-x-1 opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
+              </h3>
+              {project.description && (
+                <p className="line-clamp-3 text-sm leading-relaxed text-muted-foreground">
+                  {project.description}
+                </p>
+              )}
+              {(project.tags.length > 0 || project.skills.length > 0) && (
+                <div className="flex flex-wrap gap-1 pt-1">
+                  {project.tags.map((t) => (
+                    <TagChip key={t.id} tag={t} />
+                  ))}
+                  {project.skills.map((s) => (
+                    <TagChip key={s.id} tag={s} />
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </Link>
       ))}
     </div>
   );

@@ -5,6 +5,7 @@ import {
   PUBLIC_API_URL,
   type Publication,
   type SiteConfig,
+  type Skill,
   type Tag,
   type Talk,
 } from "./api";
@@ -46,13 +47,25 @@ function jsonReq<T>(path: string, method: string, body: unknown): Promise<T> {
 }
 
 export const api = {
+  getAuthMode: () => req<{ mode: "jwt" | "proxy" }>("/api/auth/mode", {}, false),
+
   getConfig: () => req<SiteConfig>("/api/site/config", {}, false),
   updateConfig: (body: Partial<Pick<SiteConfig, "profile" | "theme" | "features">>) =>
     jsonReq<SiteConfig>("/api/site/config", "PUT", body),
 
   listTags: () => req<Tag[]>("/api/tags", {}, false),
-  createTag: (name: string) => jsonReq<Tag>("/api/tags", "POST", { name }),
+  createTag: (name: string, color?: string | null) =>
+    jsonReq<Tag>("/api/tags", "POST", { name, color }),
+  updateTag: (id: number, body: { name?: string; color?: string | null }) =>
+    jsonReq<Tag>(`/api/tags/${id}`, "PUT", body),
   deleteTag: (id: number) => req<void>(`/api/tags/${id}`, { method: "DELETE" }),
+
+  listSkills: () => req<Skill[]>("/api/skills", {}, false),
+  createSkill: (body: Record<string, unknown>) => jsonReq<Skill>("/api/skills", "POST", body),
+  updateSkill: (id: number, body: Record<string, unknown>) =>
+    jsonReq<Skill>(`/api/skills/${id}`, "PUT", body),
+  deleteSkill: (id: number) => req<void>(`/api/skills/${id}`, { method: "DELETE" }),
+  reorderSkills: (ids: number[]) => jsonReq<Skill[]>("/api/skills/reorder", "PUT", { ids }),
 
   listPublications: () => req<Publication[]>("/api/publications", {}, false),
   createPublication: (body: Record<string, unknown>) =>
@@ -68,12 +81,27 @@ export const api = {
   updateTalk: (id: number, body: Record<string, unknown>) =>
     jsonReq<Talk>(`/api/talks/${id}`, "PUT", body),
   deleteTalk: (id: number) => req<void>(`/api/talks/${id}`, { method: "DELETE" }),
+  reorderTalks: (ids: number[]) => jsonReq<Talk[]>("/api/talks/reorder", "PUT", { ids }),
 
   listProjects: () => req<Project[]>("/api/projects", {}, false),
   createProject: (body: Record<string, unknown>) => jsonReq<Project>("/api/projects", "POST", body),
   updateProject: (id: number, body: Record<string, unknown>) =>
     jsonReq<Project>(`/api/projects/${id}`, "PUT", body),
   deleteProject: (id: number) => req<void>(`/api/projects/${id}`, { method: "DELETE" }),
+  reorderProjects: (ids: number[]) => jsonReq<Project[]>("/api/projects/reorder", "PUT", { ids }),
+  uploadProjectScreenshot: (projectId: number, file: File) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return req<{ screenshot_urls: string[] }>(`/api/uploads/projects/${projectId}/screenshots`, {
+      method: "POST",
+      body: fd,
+    });
+  },
+  deleteProjectScreenshot: (projectId: number, index: number) =>
+    req<{ screenshot_urls: string[] }>(
+      `/api/uploads/projects/${projectId}/screenshots?index=${index}`,
+      { method: "DELETE" },
+    ),
 
   uploadHeadshot: (file: File) => {
     const fd = new FormData();
@@ -84,6 +112,14 @@ export const api = {
     const fd = new FormData();
     fd.append("file", file);
     return req<{ file_url: string }>(`/api/uploads/publications/${pubId}/file`, {
+      method: "POST",
+      body: fd,
+    });
+  },
+  uploadTalkFile: (talkId: number, file: File) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return req<{ file_url: string }>(`/api/uploads/talks/${talkId}/file`, {
       method: "POST",
       body: fd,
     });

@@ -8,15 +8,18 @@ import { PublicationsPreview } from "@/components/public/publications-preview";
 import { SectionHeading } from "@/components/public/section-heading";
 import { SiteFooter } from "@/components/public/site-footer";
 import { SiteHeader } from "@/components/public/site-header";
+import { SkillsList } from "@/components/public/skills-section";
 import { TalksList } from "@/components/public/talks-section";
 import {
   getProjects,
   getPublications,
   getSiteConfig,
+  getSkills,
   getTalks,
   type Project,
   type Publication,
   type SiteConfig,
+  type Skill,
   type Talk,
 } from "@/lib/api";
 import { DEFAULT_LAYOUT, type ThemeConfig } from "@/lib/palettes";
@@ -48,7 +51,7 @@ export default async function Home() {
   const profile = config.profile || {};
   const layout = (config.theme as ThemeConfig)?.layout || DEFAULT_LAYOUT;
 
-  const [pubs, talks, projects] = await Promise.all([
+  const [pubs, talks, projects, skills] = await Promise.all([
     features.publications !== false
       ? getPublications({ limit: PREVIEW_LIMIT + 1 }).catch(() => [] as Publication[])
       : Promise.resolve([] as Publication[]),
@@ -56,13 +59,34 @@ export default async function Home() {
     features.projects !== false
       ? getProjects().catch(() => [] as Project[])
       : Promise.resolve([] as Project[]),
+    features.skills !== false
+      ? getSkills().catch(() => [] as Skill[])
+      : Promise.resolve([] as Skill[]),
   ]);
 
   // Build the enabled sections once; render them stacked (linear) or via the
   // navbar-driven pages layout.
   const sections: Section[] = [];
-  if (features.about !== false && profile.bio) {
-    sections.push({ value: "about", label: "About", content: <Markdown>{profile.bio}</Markdown> });
+  const showSkills = features.skills !== false && skills.length > 0;
+  if (features.about !== false && (profile.bio || showSkills)) {
+    // Skills render beneath the bio as one combined "About" section (even in pages mode).
+    sections.push({
+      value: "about",
+      label: "About",
+      content: (
+        <div className="space-y-8">
+          {profile.bio && <Markdown>{profile.bio}</Markdown>}
+          {showSkills && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">
+                Skills
+              </h3>
+              <SkillsList skills={skills} />
+            </div>
+          )}
+        </div>
+      ),
+    });
   }
   if (features.publications !== false) {
     sections.push({

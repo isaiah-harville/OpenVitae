@@ -28,6 +28,12 @@ class UserOut(BaseModel):
     is_admin: bool
 
 
+class AuthMode(BaseModel):
+    """How the admin UI should authenticate: built-in JWT login or a forward-auth proxy."""
+
+    mode: str  # "jwt" | "proxy"
+
+
 # ---- Site config ----
 class SiteConfigBase(BaseModel):
     profile: dict = {}
@@ -53,10 +59,17 @@ class TagOut(BaseModel):
     id: int
     name: str
     slug: str
+    color: str | None = None
 
 
 class TagCreate(BaseModel):
     name: str
+    color: str | None = None
+
+
+class TagUpdate(BaseModel):
+    name: str | None = None
+    color: str | None = None
 
 
 # ---- Publications ----
@@ -147,29 +160,64 @@ class TalkUpdate(BaseModel):
 class TalkOut(TalkBase):
     model_config = ConfigDict(from_attributes=True)
     id: int
+    file_url: str | None = None
+
+
+# ---- Skills ----
+class SkillBase(BaseModel):
+    name: str
+    category: str | None = None
+    color: str | None = None
+    sort_order: int = 0
+
+
+class SkillCreate(SkillBase):
+    pass
+
+
+class SkillUpdate(BaseModel):
+    name: str | None = None
+    category: str | None = None
+    color: str | None = None
+    sort_order: int | None = None
+
+
+class SkillOut(SkillBase):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    slug: str
 
 
 # ---- Projects ----
 class ProjectBase(BaseModel):
     name: str
     description: str | None = None
+    content: str | None = None
     url: str | None = None
     source_url: str | None = None
     sort_order: int = 0
 
 
 class ProjectCreate(ProjectBase):
-    pass
+    tag_ids: list[int] = []
+    skill_ids: list[int] = []
 
 
 class ProjectUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
+    content: str | None = None
     url: str | None = None
     source_url: str | None = None
     sort_order: int | None = None
+    tag_ids: list[int] | None = None
+    skill_ids: list[int] | None = None
 
 
 class ProjectOut(ProjectBase):
     model_config = ConfigDict(from_attributes=True)
     id: int
+    slug: str
+    tags: list[TagOut] = []
+    skills: list[SkillOut] = []
+    screenshot_urls: list[str] = []

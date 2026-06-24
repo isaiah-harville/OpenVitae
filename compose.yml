@@ -48,6 +48,11 @@ services:
       DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://openvitae:openvitae@db:5432/openvitae}
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-1440}
+      AUTH_MODE: ${AUTH_MODE:-jwt}
+      PROXY_AUTH_EMAIL_HEADER: ${PROXY_AUTH_EMAIL_HEADER:-Remote-Email}
+      PROXY_AUTH_GROUPS_HEADER: ${PROXY_AUTH_GROUPS_HEADER:-Remote-Groups}
+      PROXY_AUTH_REQUIRED_GROUP: ${PROXY_AUTH_REQUIRED_GROUP:-}
+      PROXY_AUTH_AUTO_PROVISION: ${PROXY_AUTH_AUTO_PROVISION:-true}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@openvitae.local}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-changeme}
       S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-http://minio:9000}

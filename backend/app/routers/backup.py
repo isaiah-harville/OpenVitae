@@ -8,13 +8,13 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models import Project, Publication, SiteConfig, Tag, Talk, User
+from ..models import Project, Publication, SiteConfig, Skill, Tag, Talk, User
 from ..security import get_current_user
 from ..storage import download_bytes, put_bytes
 
 router = APIRouter(prefix="/api", tags=["backup"])
 
-BACKUP_VERSION = 1
+BACKUP_VERSION = 2
 
 
 def _iso(value):
@@ -31,11 +31,15 @@ def export_backup(db: Session = Depends(get_db), _: User = Depends(get_current_u
     pubs = db.query(Publication).all()
     talks = db.query(Talk).all()
     projects = db.query(Project).all()
+    skills = db.query(Skill).all()
 
     asset_keys: list[str] = []
     if config and config.headshot_key:
         asset_keys.append(config.headshot_key)
     asset_keys += [p.file_key for p in pubs if p.file_key]
+    asset_keys += [t.file_key for t in talks if t.file_key]
+    for pr in projects:
+        asset_keys += list(pr.screenshot_keys or [])
 
     data = {
         "version": BACKUP_VERSION,
@@ -46,7 +50,7 @@ def export_backup(db: Session = Depends(get_db), _: User = Depends(get_current_u
             "features": config.features if config else {},
             "headshot_key": config.headshot_key if config else None,
         },
-        "tags": [{"name": t.name, "slug": t.slug} for t in tags],
+        "tags": [{"name": t.name, "slug": t.slug, "color": t.color} for t in tags],
         "publications": [
             {
                 "title": p.title,
@@ -72,18 +76,34 @@ def export_backup(db: Session = Depends(get_db), _: User = Depends(get_current_u
                 "url": t.url,
                 "description": t.description,
                 "sort_order": t.sort_order,
+                "file_key": t.file_key,
             }
             for t in talks
         ],
         "projects": [
             {
                 "name": pr.name,
+                "slug": pr.slug,
                 "description": pr.description,
+                "content": pr.content,
                 "url": pr.url,
                 "source_url": pr.source_url,
                 "sort_order": pr.sort_order,
+                "screenshot_keys": list(pr.screenshot_keys or []),
+                "tag_slugs": [t.slug for t in pr.tags],
+                "skill_slugs": [s.slug for s in pr.skills],
             }
             for pr in projects
+        ],
+        "skills": [
+            {
+                "name": s.name,
+                "slug": s.slug,
+                "category": s.category,
+                "color": s.color,
+                "sort_order": s.sort_order,
+            }
+            for s in skills
         ],
         "assets": [],
     }
@@ -125,10 +145,11 @@ async def restore_backup(
     if data.get("version") != BACKUP_VERSION:
         raise HTTPException(status_code=400, detail="Unsupported backup version")
 
-    # Wipe existing content (publications/talks/projects/tags) and reset config.
+    # Wipe existing content (publications/talks/projects/skills/tags) and reset config.
     db.query(Publication).delete()
     db.query(Talk).delete()
     db.query(Project).delete()
+    db.query(Skill).delete()
     db.query(Tag).delete()
     db.flush()
 
@@ -140,9 +161,22 @@ async def restore_backup(
     # Tags (slug -> Tag).
     tags_by_slug: dict[str, Tag] = {}
     for t in data.get("tags", []):
-        tag = Tag(name=t["name"], slug=t["slug"])
+        tag = Tag(name=t["name"], slug=t["slug"], color=t.get("color"))
         db.add(tag)
         tags_by_slug[t["slug"]] = tag
+
+    # Skills (slug -> Skill).
+    skills_by_slug: dict[str, Skill] = {}
+    for s in data.get("skills", []):
+        skill = Skill(
+            name=s["name"],
+            slug=s["slug"],
+            category=s.get("category"),
+            color=s.get("color"),
+            sort_order=s.get("sort_order", 0),
+        )
+        db.add(skill)
+        skills_by_slug[s["slug"]] = skill
 
     for p in data.get("publications", []):
         slugs = p.pop("tag_slugs", [])
@@ -155,7 +189,12 @@ async def restore_backup(
         db.add(Talk(**{**t, "event_date": date.fromisoformat(ed) if ed else None}))
 
     for pr in data.get("projects", []):
-        db.add(Project(**pr))
+        tag_slugs = pr.pop("tag_slugs", [])
+        skill_slugs = pr.pop("skill_slugs", [])
+        project = Project(**{k: v for k, v in pr.items()})
+        project.tags = [tags_by_slug[s] for s in tag_slugs if s in tags_by_slug]
+        project.skills = [skills_by_slug[s] for s in skill_slugs if s in skills_by_slug]
+        db.add(project)
 
     config = db.get(SiteConfig, 1)
     if config is None:

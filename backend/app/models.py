@@ -28,6 +28,28 @@ publication_tags = Table(
     Column("tag_id", ForeignKey("tags.id", ondelete="CASCADE"), primary_key=True),
 )
 
+project_tags = Table(
+    "project_tags",
+    Base.metadata,
+    Column(
+        "project_id",
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column("tag_id", ForeignKey("tags.id", ondelete="CASCADE"), primary_key=True),
+)
+
+project_skills = Table(
+    "project_skills",
+    Base.metadata,
+    Column(
+        "project_id",
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column("skill_id", ForeignKey("skills.id", ondelete="CASCADE"), primary_key=True),
+)
+
 
 class User(Base):
     __tablename__ = "users"
@@ -63,10 +85,13 @@ class Tag(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
     slug: Mapped[str] = mapped_column(String(128), unique=True, index=True, nullable=False)
+    # Optional palette color (hex like "#7c3aed" or a palette token) for tag chips.
+    color: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
     publications: Mapped[list["Publication"]] = relationship(
         secondary=publication_tags, back_populates="tags"
     )
+    projects: Mapped[list["Project"]] = relationship(secondary=project_tags, back_populates="tags")
 
 
 class Publication(Base):
@@ -102,8 +127,26 @@ class Talk(Base):
     event_date: Mapped[date | None] = mapped_column(Date, nullable=True, index=True)
     url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Object-storage key of an uploaded file (slides, etc.), if any.
+    file_key: Mapped[str | None] = mapped_column(String(512), nullable=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Skill(Base):
+    __tablename__ = "skills"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
+    slug: Mapped[str] = mapped_column(String(128), unique=True, index=True, nullable=False)
+    category: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    color: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    projects: Mapped[list["Project"]] = relationship(
+        secondary=project_skills, back_populates="skills"
+    )
 
 
 class Project(Base):
@@ -111,8 +154,16 @@ class Project(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(512), nullable=False)
+    slug: Mapped[str] = mapped_column(String(512), unique=True, index=True, nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Long-form markdown body shown on the project detail page.
+    content: Mapped[str | None] = mapped_column(Text, nullable=True)
     url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     source_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    # Ordered list of object-storage keys for screenshots.
+    screenshot_keys: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    tags: Mapped[list[Tag]] = relationship(secondary=project_tags, back_populates="projects")
+    skills: Mapped[list[Skill]] = relationship(secondary=project_skills, back_populates="projects")

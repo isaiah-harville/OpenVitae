@@ -25,6 +25,19 @@ const EMPTY_TALK = {
 export function TalkManager({ talks, reload }: { talks: Talk[] } & ReloadProps) {
   const [form, setForm] = useState({ ...EMPTY_TALK });
 
+  async function move(index: number, delta: number) {
+    const next = [...talks];
+    const target = index + delta;
+    if (target < 0 || target >= next.length) return;
+    [next[index], next[target]] = [next[target], next[index]];
+    try {
+      await api.reorderTalks(next.map((t) => t.id));
+      await reload();
+    } catch (e) {
+      toast.error(String(e));
+    }
+  }
+
   async function create() {
     if (!form.title.trim()) {
       toast.error("Title is required");
@@ -51,8 +64,15 @@ export function TalkManager({ talks, reload }: { talks: Talk[] } & ReloadProps) 
         </CardHeader>
         <CardContent className="space-y-3">
           {talks.length === 0 && <p className="text-sm text-muted-foreground">None yet.</p>}
-          {talks.map((talk) => (
-            <TalkRow key={talk.id} talk={talk} reload={reload} />
+          {talks.map((talk, i) => (
+            <TalkRow
+              key={talk.id}
+              talk={talk}
+              reload={reload}
+              onMove={(delta) => move(i, delta)}
+              isFirst={i === 0}
+              isLast={i === talks.length - 1}
+            />
           ))}
         </CardContent>
       </Card>

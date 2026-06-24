@@ -3,16 +3,27 @@ import { Inter } from "next/font/google";
 import type { CSSProperties } from "react";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
-import { getSiteConfig } from "@/lib/api";
+import { getSiteConfig, siteName } from "@/lib/api";
 import { DEFAULT_PALETTE, type ThemeConfig } from "@/lib/palettes";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
-export const metadata: Metadata = {
-  title: "OpenVitae",
-  description: "Config-driven CV website and publication manager",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  try {
+    const config = await getSiteConfig();
+    const name = siteName(config);
+    const description =
+      config.profile?.title || config.profile?.bio || "A config-driven CV website.";
+    return {
+      title: { default: name, template: `%s · ${name}` },
+      description,
+      openGraph: { title: name, description },
+    };
+  } catch {
+    return { title: "OpenVitae", description: "Config-driven CV website and publication manager" };
+  }
+}
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   let theme: ThemeConfig = {};
