@@ -10,9 +10,9 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 
-# Node / Next.js
+# Node / SvelteKit
 node_modules/
-.next/
+.svelte-kit/
 out/
 npm-debug.log*
 yarn-error.log*

@@ -5,16 +5,18 @@ from datetime import UTC, date, datetime
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models import Project, Publication, SiteConfig, Skill, Tag, Talk, User
+from ..models import BlogPost, Project, Publication, SiteConfig, Skill, Tag, Talk, User
+from ..page_schema import PageDocument
 from ..security import get_current_user
 from ..storage import download_bytes, put_bytes
 
 router = APIRouter(prefix="/api", tags=["backup"])
 
-BACKUP_VERSION = 2
+BACKUP_VERSION = 3
 
 
 def _iso(value):
@@ -32,6 +34,7 @@ def export_backup(db: Session = Depends(get_db), _: User = Depends(get_current_u
     talks = db.query(Talk).all()
     projects = db.query(Project).all()
     skills = db.query(Skill).all()
+    blog_posts = db.query(BlogPost).all()
 
     asset_keys: list[str] = []
     if config and config.headshot_key:
@@ -40,6 +43,13 @@ def export_backup(db: Session = Depends(get_db), _: User = Depends(get_current_u
     asset_keys += [t.file_key for t in talks if t.file_key]
     for pr in projects:
         asset_keys += list(pr.screenshot_keys or [])
+    if config and config.pages:
+        asset_keys += [
+            block["imageKey"]
+            for page in config.pages.get("pages", [])
+            for block in page.get("blocks", [])
+            if block.get("imageKey")
+        ]
 
     data = {
         "version": BACKUP_VERSION,
@@ -48,6 +58,7 @@ def export_backup(db: Session = Depends(get_db), _: User = Depends(get_current_u
             "profile": config.profile if config else {},
             "theme": config.theme if config else {},
             "features": config.features if config else {},
+            "pages": config.pages if config else None,
             "headshot_key": config.headshot_key if config else None,
         },
         "tags": [{"name": t.name, "slug": t.slug, "color": t.color} for t in tags],
@@ -105,12 +116,24 @@ def export_backup(db: Session = Depends(get_db), _: User = Depends(get_current_u
             }
             for s in skills
         ],
+        "blog_posts": [
+            {
+                "slug": post.slug,
+                "title": post.title,
+                "excerpt": post.excerpt,
+                "content": post.content,
+                "published": post.published,
+                "published_at": _iso(post.published_at),
+                "created_at": _iso(post.created_at),
+            }
+            for post in blog_posts
+        ],
         "assets": [],
     }
 
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
-        for key in asset_keys:
+        for key in dict.fromkeys(asset_keys):
             fetched = download_bytes(key)
             if fetched is None:
                 continue
@@ -142,8 +165,17 @@ async def restore_backup(
     except (zipfile.BadZipFile, KeyError, json.JSONDecodeError) as exc:
         raise HTTPException(status_code=400, detail="Invalid backup file") from exc
 
-    if data.get("version") != BACKUP_VERSION:
+    if data.get("version") not in (2, BACKUP_VERSION):
         raise HTTPException(status_code=400, detail="Unsupported backup version")
+
+    restored_pages = data.get("site_config", {}).get("pages")
+    if restored_pages is not None:
+        try:
+            restored_pages = PageDocument.model_validate(restored_pages).model_dump()
+        except ValidationError as exc:
+            raise HTTPException(
+                status_code=400, detail="Backup has an invalid page layout"
+            ) from exc
 
     # Wipe existing content (publications/talks/projects/skills/tags) and reset config.
     db.query(Publication).delete()
@@ -151,6 +183,7 @@ async def restore_backup(
     db.query(Project).delete()
     db.query(Skill).delete()
     db.query(Tag).delete()
+    db.query(BlogPost).delete()
     db.flush()
 
     # Re-upload assets, preserving their original keys.
@@ -196,6 +229,23 @@ async def restore_backup(
         project.skills = [skills_by_slug[s] for s in skill_slugs if s in skills_by_slug]
         db.add(project)
 
+    for post in data.get("blog_posts", []):
+        db.add(
+            BlogPost(
+                slug=post["slug"],
+                title=post["title"],
+                excerpt=post.get("excerpt", ""),
+                content=post.get("content", ""),
+                published=post.get("published", False),
+                published_at=datetime.fromisoformat(post["published_at"])
+                if post.get("published_at")
+                else None,
+                created_at=datetime.fromisoformat(post["created_at"])
+                if post.get("created_at")
+                else None,
+            )
+        )
+
     config = db.get(SiteConfig, 1)
     if config is None:
         config = SiteConfig(id=1)
@@ -204,6 +254,7 @@ async def restore_backup(
     config.profile = sc.get("profile", {})
     config.theme = sc.get("theme", {})
     config.features = sc.get("features", {})
+    config.pages = restored_pages
     config.headshot_key = sc.get("headshot_key")
 
     db.commit()

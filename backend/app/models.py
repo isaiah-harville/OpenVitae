@@ -73,6 +73,8 @@ class SiteConfig(Base):
     theme: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
     # Feature flags: which sections/features of the public site are enabled.
     features: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+    # Null means an existing site still uses the original homepage renderer.
+    pages: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     headshot_key: Mapped[str | None] = mapped_column(String(512), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -167,3 +169,16 @@ class Project(Base):
 
     tags: Mapped[list[Tag]] = relationship(secondary=project_tags, back_populates="projects")
     skills: Mapped[list[Skill]] = relationship(secondary=project_skills, back_populates="projects")
+
+
+class BlogPost(Base):
+    __tablename__ = "blog_posts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    slug: Mapped[str] = mapped_column(String(512), unique=True, index=True, nullable=False)
+    title: Mapped[str] = mapped_column(String(512), nullable=False)
+    excerpt: Mapped[str] = mapped_column(String(1000), default="", nullable=False)
+    content: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    published: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

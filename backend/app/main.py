@@ -9,6 +9,7 @@ from .db_migrate import run_migrations
 from .routers import (
     auth,
     backup,
+    blog,
     imports,
     projects,
     publications,
@@ -51,6 +52,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
+app.include_router(blog.router)
 app.include_router(site.router)
 app.include_router(tags.router)
 app.include_router(publications.router)

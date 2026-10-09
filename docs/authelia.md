@@ -23,12 +23,11 @@ The built-in JWT login remains the default — set `AUTH_MODE=proxy` to switch.
 > forge them.**
 >
 > - **Gate `/admin` *and* `/api`.** The admin browser calls the API same-origin at `/api`
->   (the Next.js frontend forwards those requests — including `Remote-*` — to the API), so
+>   (the SvelteKit frontend forwards those requests — including `Remote-*` — to the API), so
 >   the forward-auth proxy must cover both paths. The public site fetches its data
 >   server-side over the internal network and serves files via presigned object-storage
 >   URLs, so it never uses the browser `/api` route — gating `/api` does not affect public
->   visitors. (If you bypass the same-origin proxy with `NEXT_PUBLIC_API_URL`, protect that
->   API origin instead.)
+>   visitors.
 > - **Strip inbound `Remote-*` headers.** Because the API trusts these headers in proxy
 >   mode, the proxy must overwrite them on every request so a client can't spoof
 >   `Remote-Email`. Authelia forward-auth does this for the headers listed in
@@ -51,7 +50,6 @@ The built-in JWT login remains the default — set `AUTH_MODE=proxy` to switch.
 # .env
 AUTH_MODE=proxy
 PROXY_AUTH_REQUIRED_GROUP=openvitae-admins
-NEXT_PUBLIC_API_URL=https://cv.example.com/api
 ```
 
 ### Helm
@@ -77,7 +75,7 @@ ingress:
     traefik.ingress.kubernetes.io/router.middlewares: apps-authelia-forwardauth@kubernetescrd
 ```
 
-No `NEXT_PUBLIC_API_URL` override is needed: the browser stays same-origin, the gated `/api`
+The browser stays same-origin; the gated `/api`
 route carries `Remote-*` through the frontend to the API.
 
 ## Example: Traefik + Authelia

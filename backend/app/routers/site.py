@@ -25,6 +25,7 @@ def _to_out(config: SiteConfig) -> SiteConfigOut:
         profile=config.profile,
         theme=config.theme,
         features=config.features,
+        pages=config.pages,
         headshot_url=presigned_url(config.headshot_key),
         updated_at=config.updated_at,
     )
@@ -49,6 +50,8 @@ def update_config(
         config.theme = payload.theme
     if payload.features is not None:
         config.features = payload.features
+    if payload.pages is not None:
+        config.pages = payload.pages.model_dump(exclude_none=True)
     db.commit()
     db.refresh(config)
     return _to_out(config)

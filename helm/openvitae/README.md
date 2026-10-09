@@ -1,6 +1,6 @@
 # OpenVitae Helm chart
 
-Deploys OpenVitae (FastAPI **api** + Next.js **frontend**) to Kubernetes, with an
+Deploys OpenVitae (FastAPI **api** + SvelteKit **frontend**) to Kubernetes, with an
 optional in-cluster **PostgreSQL** and **MinIO** that mirror the Docker Compose
 stack. Postgres and MinIO run as StatefulSets backed by PersistentVolumeClaims,
 so **their data survives pod restarts and `helm upgrade`.**
@@ -116,7 +116,7 @@ extraEnv:
 
 frontend:
   extraEnv:
-    NEXT_PUBLIC_API_URL: https://api.example.com   # bypass the /api proxy
+    HOST: 0.0.0.0
 ```
 
 Non-secret env lands in a ConfigMap; secret env (`JWT_SECRET`, `ADMIN_PASSWORD`,

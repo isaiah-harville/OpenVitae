@@ -3,7 +3,7 @@
   "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": false },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!**/.next", "!**/node_modules"]
+    "includes": ["**", "!**/.next", "!**/.svelte-kit", "!**/node_modules", "!**/*.svelte"]
   },
   "formatter": {
     "enabled": true,
