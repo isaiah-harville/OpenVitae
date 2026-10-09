@@ -25,7 +25,7 @@
 <main class="site-shell py-12 md:py-20">
   <div class="grid gap-5 md:grid-cols-2 md:gap-7">
     {#each page.blocks as block (block.id)}
-      {#if (block.type !== 'education' || profile.education?.length) && (block.type !== 'links' || profile.links?.length)}
+      {#if (block.type !== 'education' || profile.education?.length) && (block.type !== 'links' || profile.links?.length) && (block.type !== 'publications' || content.publications.length)}
       <section id={block.id} class={block.width === 2 ? 'min-w-0 md:col-span-2' : 'min-w-0'}>
         {#if block.type === 'hero'}
           <div class="site-card grid gap-9 rounded-[2rem] p-8 md:grid-cols-[1fr_auto] md:items-center md:p-14">

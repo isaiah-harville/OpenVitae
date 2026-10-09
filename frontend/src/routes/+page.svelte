@@ -18,7 +18,7 @@
   let active = $state('about');
   const sections = $derived([
     ...(features.about !== false && (profile.bio || data.skills.length) ? ['about'] : []),
-    ...(features.publications !== false ? ['publications'] : []),
+    ...(features.publications !== false && data.publications.length ? ['publications'] : []),
     ...(features.projects !== false && data.projects.length ? ['projects'] : []),
     ...(features.talks !== false && data.talks.length ? ['talks'] : []),
     ...(features.contact !== false && profile.email ? ['contact'] : [])

@@ -6,6 +6,7 @@
   import { siteName } from '$lib/api';
   import { DEFAULT_PALETTE } from '$lib/palettes';
   import { pagePath } from '$lib/pages';
+  import { showBlog, showPublications } from '$lib/public-content';
   import type { LayoutData } from './$types';
 
   let { data, children }: { data: LayoutData; children: import('svelte').Snippet } = $props();
@@ -43,8 +44,8 @@
     </a>
     <nav class="flex max-w-[65vw] items-center gap-3 overflow-x-auto whitespace-nowrap text-sm font-semibold sm:gap-6" aria-label="Main navigation">
       <a class:active={$page.url.pathname === '/'} href="/">Home</a>
-      <a class:active={$page.url.pathname.startsWith('/publications')} href="/publications">Publications</a>
-      {#if config?.features.blog === true}<a class:active={$page.url.pathname.startsWith('/blog')} href="/blog">Blog</a>{/if}
+      {#if showPublications(data.publicContent.publications)}<a class:active={$page.url.pathname.startsWith('/publications')} href="/publications">Publications</a>{/if}
+      {#if showBlog(config?.features.blog === true, data.publicContent.posts)}<a class:active={$page.url.pathname.startsWith('/blog')} href="/blog">Blog</a>{/if}
       {#each config?.pages?.pages.filter((item) => item.inNav && item.slug !== 'home') ?? [] as sitePage (sitePage.id)}<a class:active={$page.url.pathname === pagePath(sitePage.slug)} href={pagePath(sitePage.slug)}>{sitePage.title}</a>{/each}
       <button class="grid size-9 place-items-center rounded-full border border-[var(--site-line)]" type="button" aria-label="Toggle color mode" onclick={toggleMode}>
         {#if dark}<Sun size={17}/>{:else}<Moon size={17}/>{/if}
