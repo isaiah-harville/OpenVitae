@@ -143,3 +143,12 @@ a {
 .prose a {
   color: var(--site-accent);
 }
+.prose div[align="center"] {
+  text-align: center;
+}
+.prose div[align="center"] img {
+  display: inline-block;
+  margin: 0.25rem;
+  max-width: 100%;
+  vertical-align: middle;
+}

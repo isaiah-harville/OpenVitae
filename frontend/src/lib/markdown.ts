@@ -7,6 +7,7 @@ export function markdown(source: string): string {
     allowedAttributes: {
       ...sanitizeHtml.defaults.allowedAttributes,
       a: ["href", "title", "target", "rel"],
+      div: ["align"],
       img: ["src", "alt", "title"],
     },
     allowedSchemes: ["http", "https", "mailto"],
