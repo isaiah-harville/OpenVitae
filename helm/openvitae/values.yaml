@@ -70,7 +70,7 @@ frontend:
   service:
     type: ClusterIP
     port: 3000
-  # Extra frontend env vars (e.g. NEXT_PUBLIC_API_URL to bypass the /api proxy).
+  # Extra frontend environment variables.
   extraEnv: {}
   podSecurityContext: {}
   securityContext: {}

@@ -8,7 +8,7 @@ theme, manage your papers with tags, and toggle features — all from a `/admin`
 
 | Service    | Tech                          | Purpose                                            |
 | ---------- | ----------------------------- | -------------------------------------------------- |
-| `frontend` | Next.js 15 (App Router, TS)   | Public config-driven CV site + `/admin` dashboard  |
+| `frontend` | SvelteKit 2, Sivir UI, Tailwind v4 | Public CV site + `/admin` dashboard |
 | `api`      | FastAPI (Python 3.12, uv)     | Auth, site config, publications/tags, file uploads |
 | `db`       | PostgreSQL 17                 | Relational data                                    |
 | `minio`    | MinIO (S3-compatible)         | Object storage for headshots & paper PDFs          |
@@ -18,7 +18,7 @@ palette, feature flags) plus publications and tags fully describe what renders. 
 edits that config; the frontend renders it.
 
 ```
-Browser ──> frontend (Next.js) ──SSR──> api (FastAPI) ──> Postgres
+Browser ──> frontend (SvelteKit) ──SSR──> api (FastAPI) ──> Postgres
    │                                          │
    └──── presigned URLs ──> MinIO <───────────┘
 ```
@@ -52,8 +52,8 @@ All config is via environment variables — see [.env.example](.env.example). Ke
 - `ADMIN_EMAIL` / `ADMIN_PASSWORD` — seeded on first run only.
 - `S3_PUBLIC_ENDPOINT_URL` — the MinIO/S3 endpoint the *browser* can reach (used to sign
   download URLs). Behind a real domain, set this to your public object-storage URL.
-- `NEXT_PUBLIC_API_URL` — baked into the frontend at build time; the browser uses it to
-  reach the API.
+- `SERVER_API_URL` — internal API origin used by SvelteKit at request time. Browser
+  requests use the same-origin `/api/*` proxy.
 
 
 ## Features

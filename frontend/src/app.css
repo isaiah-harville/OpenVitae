@@ -1,0 +1,133 @@
+@import "@sivir-ui/svelte/ui.css";
+@plugin "@tailwindcss/typography";
+
+:root {
+  --site-accent: #7957e8;
+  --site-accent-soft: color-mix(in srgb, var(--site-accent) 11%, transparent);
+  --site-paper: #f7f6f3;
+  --site-ink: #201d2c;
+  --site-muted: #686479;
+  --site-line: #e5e1ed;
+  --site-surface: #fff;
+}
+.dark {
+  --site-paper: #13111b;
+  --site-ink: #f5f1fb;
+  --site-muted: #aaa4bb;
+  --site-line: #353042;
+  --site-surface: #1c1926;
+}
+[data-palette="blue"] {
+  --site-accent: #3478ea;
+}
+[data-palette="violet"] {
+  --site-accent: #7957e8;
+}
+[data-palette="rose"] {
+  --site-accent: #d94679;
+}
+[data-palette="red"] {
+  --site-accent: #d84a56;
+}
+[data-palette="orange"] {
+  --site-accent: #d97732;
+}
+[data-palette="green"] {
+  --site-accent: #288b69;
+}
+[data-palette="teal"] {
+  --site-accent: #269c9b;
+}
+[data-palette="neutral"] {
+  --site-accent: #6d6580;
+}
+body {
+  background: var(--site-paper);
+  color: var(--site-ink);
+  font-family: Inter, sans-serif;
+}
+a {
+  transition: color 0.2s ease;
+}
+::selection {
+  background: var(--site-accent-soft);
+}
+.site-shell {
+  width: min(100% - 3rem, 1120px);
+  margin-inline: auto;
+}
+.site-card {
+  background: var(--site-surface);
+  border: 1px solid var(--site-line);
+  box-shadow: 0 16px 45px -36px #4b326b88;
+}
+.site-card:hover {
+  border-color: color-mix(in srgb, var(--site-accent) 45%, var(--site-line));
+}
+.site-eyebrow {
+  color: var(--site-accent);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.site-heading {
+  font-size: clamp(1.7rem, 4vw, 2.6rem);
+  font-weight: 750;
+  letter-spacing: -0.055em;
+  line-height: 1.1;
+}
+.site-copy {
+  color: var(--site-muted);
+  line-height: 1.75;
+}
+.site-action {
+  background: var(--site-accent);
+  color: white;
+  border-radius: 999px;
+  padding: 0.78rem 1.25rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.site-action:hover {
+  filter: brightness(1.1);
+  color: white;
+  transform: translateY(-2px);
+}
+.site-chip {
+  display: inline-flex;
+  border: 1px solid var(--site-line);
+  border-radius: 999px;
+  padding: 0.28rem 0.68rem;
+  font-size: 0.72rem;
+  font-weight: 650;
+  background: var(--site-accent-soft);
+  color: var(--site-accent);
+}
+.site-field {
+  width: 100%;
+  background: var(--site-surface);
+  border: 1px solid var(--site-line);
+  border-radius: 0.8rem;
+  padding: 0.7rem 0.9rem;
+  color: var(--site-ink);
+}
+.site-field:focus {
+  outline: 2px solid var(--site-accent);
+  outline-offset: 1px;
+}
+.site-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+}
+.prose {
+  color: var(--site-ink);
+}
+.prose a {
+  color: var(--site-accent);
+}
