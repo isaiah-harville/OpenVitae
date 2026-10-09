@@ -2,8 +2,8 @@ apiVersion: v2
 name: openvitae
 description: Config-driven CV website and publication manager (api + frontend + Postgres + MinIO)
 type: application
-version: 1.0.2
-appVersion: "1.0.2"
+version: 1.0.3
+appVersion: "1.0.3"
 home: https://github.com/isaiah-harville/OpenVitae
 sources:
   - https://github.com/isaiah-harville/OpenVitae

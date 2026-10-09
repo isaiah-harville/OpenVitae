@@ -13,6 +13,20 @@ def test_valid_home_and_custom_page():
     assert [item.slug for item in document.pages] == ["home", "research"]
 
 
+@pytest.mark.parametrize("block_type", ["links", "education"])
+def test_version_two_accepts_movable_profile_blocks(block_type):
+    block = {
+        "id": "links",
+        "type": block_type,
+        "width": 2,
+        "heading": "Links",
+        "eyebrow": "",
+        "text": "",
+    }
+    document = PageDocument.model_validate({"version": 2, "pages": [page(blocks=[block])]})
+    assert document.pages[0].blocks[0].type == block_type
+
+
 @pytest.mark.parametrize(
     "slug", ["admin", "api", "projects", "publications", "My Page", "bad/path"]
 )

@@ -74,6 +74,13 @@ export type SiteConfig = {
     email?: string;
     links?: { label: string; url: string }[];
     socials?: { platform: string; url: string }[];
+    education?: {
+      institution: string;
+      degree: string;
+      concentration: string;
+      startYear: string;
+      endYear: string;
+    }[];
   };
   theme: Record<string, string>;
   features: Record<string, boolean>;

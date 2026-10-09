@@ -16,6 +16,8 @@ BlockType = Literal[
     "publications",
     "projects",
     "talks",
+    "education",
+    "links",
     "contact",
 ]
 RESERVED_SLUGS = {"admin", "api", "blog", "projects", "publications", "home", "healthz"}
@@ -61,7 +63,7 @@ class SitePage(BaseModel):
 class PageDocument(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    version: Literal[1]
+    version: Literal[1, 2]
     pages: list[SitePage] = Field(min_length=1, max_length=30)
 
     @model_validator(mode="after")

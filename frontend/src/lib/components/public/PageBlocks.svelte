@@ -7,6 +7,7 @@
   import ProjectCard from './ProjectCard.svelte';
   import PublicationCard from './PublicationCard.svelte';
   import ProfileLinks from './ProfileLinks.svelte';
+  import ProfileEducation from './ProfileEducation.svelte';
   import SectionTitle from './SectionTitle.svelte';
   import TagChip from './TagChip.svelte';
 
@@ -24,6 +25,7 @@
 <main class="site-shell py-12 md:py-20">
   <div class="grid gap-5 md:grid-cols-2 md:gap-7">
     {#each page.blocks as block (block.id)}
+      {#if (block.type !== 'education' || profile.education?.length) && (block.type !== 'links' || profile.links?.length)}
       <section id={block.id} class={block.width === 2 ? 'min-w-0 md:col-span-2' : 'min-w-0'}>
         {#if block.type === 'hero'}
           <div class="site-card grid gap-9 rounded-[2rem] p-8 md:grid-cols-[1fr_auto] md:items-center md:p-14">
@@ -34,6 +36,10 @@
             </div>
             {#if config.features.headshot !== false}<div class="mx-auto grid size-44 place-items-center overflow-hidden rounded-full border border-[var(--site-line)] bg-[var(--site-paper)] md:size-56">{#if config.headshot_url}<img src={config.headshot_url} alt={profile.name || 'Portrait'} class="size-full object-cover"/>{:else}<span class="text-7xl font-black">{(profile.name || 'V').slice(0, 1)}</span>{/if}</div>{/if}
           </div>
+        {:else if block.type === 'links'}
+          <ProfileLinks links={profile.links || []} heading={block.heading}/>
+        {:else if block.type === 'education'}
+          <ProfileEducation entries={profile.education || []} heading={block.heading}/>
         {:else if block.type === 'contact'}
           <div class="rounded-[2rem] bg-[var(--site-accent)] p-8 text-[var(--site-on-accent)] md:p-12"><p class="mb-4 text-xs font-bold uppercase tracking-[.2em] opacity-70">{block.eyebrow}</p><h2 class="max-w-2xl text-4xl font-extrabold tracking-tight">{block.heading}</h2>{#if block.text}<p class="mt-4 max-w-xl">{block.text}</p>{/if}<div class="mt-8 flex flex-wrap gap-3">{#if profile.email}<a class="rounded-full bg-[var(--site-paper)] px-5 py-3 text-sm font-bold text-[var(--site-ink)]" href={`mailto:${profile.email}`}><Mail size={15} class="mr-2 inline"/>{profile.email}</a>{/if}</div></div>
         {:else}
@@ -52,9 +58,7 @@
           </div>
         {/if}
       </section>
+      {/if}
     {/each}
   </div>
-  {#if page.slug === 'home' && profile.links?.length}
-    <div class="mt-8"><ProfileLinks links={profile.links}/></div>
-  {/if}
 </main>

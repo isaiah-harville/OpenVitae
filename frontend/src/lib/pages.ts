@@ -9,6 +9,8 @@ export const BLOCK_TYPES = [
   "publications",
   "projects",
   "talks",
+  "education",
+  "links",
   "contact",
 ] as const;
 export type BlockType = (typeof BLOCK_TYPES)[number];
@@ -33,11 +35,21 @@ export type SitePage = {
   inNav: boolean;
   blocks: PageBlock[];
 };
-export type PageDocument = { version: 1; pages: SitePage[] };
+export type PageDocument = { version: 1 | 2; pages: SitePage[] };
 
-export function copyPages(pages: PageDocument): PageDocument {
+export function migratePages(pages: PageDocument, hasLinks: boolean): PageDocument {
   // Page documents are JSON data; JSON cloning unwraps Svelte's reactive proxies.
-  return JSON.parse(JSON.stringify(pages)) as PageDocument;
+  const copy = JSON.parse(JSON.stringify(pages)) as PageDocument;
+  if (copy.version === 1) {
+    copy.version = 2;
+    if (!copy.pages[0].blocks.some((block) => block.type === "education")) {
+      copy.pages[0].blocks.push({ ...createBlock("education"), id: "home-education" });
+    }
+    if (hasLinks && !copy.pages[0].blocks.some((block) => block.type === "links")) {
+      copy.pages[0].blocks.push({ ...createBlock("links"), id: "home-links" });
+    }
+  }
+  return copy;
 }
 
 const defaults: Record<BlockType, Pick<PageBlock, "heading" | "eyebrow" | "text" | "width">> = {
@@ -56,6 +68,8 @@ const defaults: Record<BlockType, Pick<PageBlock, "heading" | "eyebrow" | "text"
   },
   projects: { heading: "Projects & experiments", eyebrow: "Selected work", text: "", width: 2 },
   talks: { heading: "Talks & appearances", eyebrow: "On stage", text: "", width: 2 },
+  education: { heading: "Education", eyebrow: "Background", text: "", width: 2 },
+  links: { heading: "Links", eyebrow: "Elsewhere", text: "", width: 2 },
   contact: {
     heading: "Have something in mind? Let's talk.",
     eyebrow: "Let's connect",
@@ -76,6 +90,8 @@ export function defaultPages(
     talks: number;
     hasBio: boolean;
     hasContact: boolean;
+    hasLinks: boolean;
+    hasEducation: boolean;
   },
 ): PageDocument {
   const types: BlockType[] = [
@@ -85,19 +101,23 @@ export function defaultPages(
     "publications",
     "projects",
     "talks",
+    "education",
     "contact",
+    "links",
   ];
   const visible = (type: BlockType) => {
     if (features[type] === false) return false;
-    if (!content) return type !== "skills";
+    if (!content) return type !== "skills" && type !== "links" && type !== "education";
     if (type === "about") return content.hasBio || content.skills > 0;
     if (type === "skills") return content.skills > 0;
     if (type === "projects" || type === "talks") return content[type] > 0;
     if (type === "contact") return content.hasContact;
+    if (type === "links") return content.hasLinks;
+    if (type === "education") return content.hasEducation;
     return true;
   };
   return {
-    version: 1,
+    version: 2,
     pages: [
       {
         id: "home",

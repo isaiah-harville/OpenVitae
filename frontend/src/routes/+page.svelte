@@ -6,9 +6,11 @@
   import PageBlocks from '$lib/components/public/PageBlocks.svelte';
   import ProjectCard from '$lib/components/public/ProjectCard.svelte';
   import ProfileLinks from '$lib/components/public/ProfileLinks.svelte';
+  import ProfileEducation from '$lib/components/public/ProfileEducation.svelte';
   import SectionTitle from '$lib/components/public/SectionTitle.svelte';
   import TagChip from '$lib/components/public/TagChip.svelte';
   import type { PageData } from './$types';
+  import { migratePages } from '$lib/pages';
   let { data }: { data: PageData } = $props();
   const config = $derived(data.config);
   const profile = $derived(config?.profile ?? {});
@@ -27,7 +29,7 @@
 {#if !config}
   <main class="site-shell py-32 text-center"><h1 class="site-heading">OpenVitae is almost ready.</h1><p class="site-copy mt-4">The API is unavailable. Start the backend, then <a href="/admin">configure your site</a>.</p></main>
 {:else if config.pages}
-  <PageBlocks page={config.pages.pages[0]} {config} content={data}/>
+  <PageBlocks page={migratePages(config.pages, Boolean(profile.links?.length)).pages[0]} {config} content={data}/>
 {:else}
 <main>
   <div class="relative overflow-hidden border-b border-[var(--site-line)]">
@@ -69,6 +71,9 @@
       {/if}
       {#if profile.links?.length}
         <ProfileLinks links={profile.links}/>
+      {/if}
+      {#if profile.education?.length}
+        <ProfileEducation entries={profile.education}/>
       {/if}
       {#if sections.includes('contact') && (!pages || active === 'contact')}
         <section id="contact" class="rounded-[2rem] bg-[var(--site-accent)] p-8 text-[var(--site-on-accent)] md:p-14"><p class="mb-3 text-xs font-bold uppercase tracking-[.2em] opacity-70">05 / Let's connect</p><h2 class="max-w-xl text-4xl font-extrabold tracking-tight md:text-5xl">Have something in mind? Let's talk.</h2><div class="mt-8 flex flex-wrap gap-4">{#if profile.email}<a class="inline-flex items-center gap-2 rounded-full bg-[var(--site-paper)] px-5 py-3 text-sm font-bold text-[var(--site-ink)]" href={`mailto:${profile.email}`}><Mail size={16}/>{profile.email}</a>{/if}</div></section>
