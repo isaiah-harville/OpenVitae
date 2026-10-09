@@ -12,12 +12,13 @@
   import EntityEditor from '$lib/components/admin/EntityEditor.svelte';
   import ImportEditor from '$lib/components/admin/ImportEditor.svelte';
   import DataEditor from '$lib/components/admin/DataEditor.svelte';
+  import PageBuilder from '$lib/components/admin/PageBuilder.svelte';
 
   let config = $state<SiteConfig | null>(null);
   let tags = $state<Tag[]>([]); let publications = $state<Publication[]>([]);
   let talks = $state<Talk[]>([]); let projects = $state<Project[]>([]); let skills = $state<Skill[]>([]);
   let active = $state('profile'); let message = $state(''); let error = $state(false);
-  const tabs = ['profile', 'appearance', 'publications', 'talks', 'projects', 'skills', 'tags', 'data'];
+  const tabs = ['profile', 'pages', 'appearance', 'publications', 'talks', 'projects', 'skills', 'tags', 'data'];
   function report(value: string, isError = false) { message = value; error = isError; window.setTimeout(() => { if (message === value) message = ''; }, 5000); }
   async function reload() {
     [config, tags, publications, talks, projects, skills] = await Promise.all([
@@ -42,6 +43,7 @@
       <div class="min-w-0 space-y-5">
         {#if active === 'profile'}<ProfileEditor {config} updated={(value) => config = value} {report}/><HeadshotEditor {config} updated={(value) => config = value} {report}/><FeatureEditor {config} updated={(value) => config = value} {report}/>{/if}
         {#if active === 'appearance'}<AppearanceEditor {config} updated={(value) => config = value} {report}/>{/if}
+        {#if active === 'pages'}<PageBuilder {config} content={{ publications, talks, projects, skills }} updated={(value) => config = value} {report}/>{/if}
         {#if active === 'publications'}<ImportEditor {reload} {report}/><EntityEditor kind="publications" items={publications} {tags} {reload} {report}/>{/if}
         {#if active === 'talks'}<EntityEditor kind="talks" items={talks} {reload} {report}/>{/if}
         {#if active === 'projects'}<EntityEditor kind="projects" items={projects} {tags} {skills} {reload} {report}/>{/if}
@@ -52,4 +54,4 @@
     </div>
   {:else}<p class="site-copy py-20">Loading workspace…</p>{/if}
 </main>
-<style>nav button { color: var(--site-muted); } nav button:hover { background: var(--site-accent-soft); color: var(--site-ink); } nav button.chosen { background: var(--site-accent); color: white; }</style>
+<style>nav button { color: var(--site-muted); } nav button:hover { background: var(--site-accent-soft); color: var(--site-ink); } nav button.chosen { background: var(--site-accent); color: var(--site-on-accent); }</style>

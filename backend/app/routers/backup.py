@@ -5,10 +5,12 @@ from datetime import UTC, date, datetime
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..models import Project, Publication, SiteConfig, Skill, Tag, Talk, User
+from ..page_schema import PageDocument
 from ..security import get_current_user
 from ..storage import download_bytes, put_bytes
 
@@ -40,6 +42,13 @@ def export_backup(db: Session = Depends(get_db), _: User = Depends(get_current_u
     asset_keys += [t.file_key for t in talks if t.file_key]
     for pr in projects:
         asset_keys += list(pr.screenshot_keys or [])
+    if config and config.pages:
+        asset_keys += [
+            block["imageKey"]
+            for page in config.pages.get("pages", [])
+            for block in page.get("blocks", [])
+            if block.get("imageKey")
+        ]
 
     data = {
         "version": BACKUP_VERSION,
@@ -48,6 +57,7 @@ def export_backup(db: Session = Depends(get_db), _: User = Depends(get_current_u
             "profile": config.profile if config else {},
             "theme": config.theme if config else {},
             "features": config.features if config else {},
+            "pages": config.pages if config else None,
             "headshot_key": config.headshot_key if config else None,
         },
         "tags": [{"name": t.name, "slug": t.slug, "color": t.color} for t in tags],
@@ -110,7 +120,7 @@ def export_backup(db: Session = Depends(get_db), _: User = Depends(get_current_u
 
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
-        for key in asset_keys:
+        for key in dict.fromkeys(asset_keys):
             fetched = download_bytes(key)
             if fetched is None:
                 continue
@@ -144,6 +154,15 @@ async def restore_backup(
 
     if data.get("version") != BACKUP_VERSION:
         raise HTTPException(status_code=400, detail="Unsupported backup version")
+
+    restored_pages = data.get("site_config", {}).get("pages")
+    if restored_pages is not None:
+        try:
+            restored_pages = PageDocument.model_validate(restored_pages).model_dump()
+        except ValidationError as exc:
+            raise HTTPException(
+                status_code=400, detail="Backup has an invalid page layout"
+            ) from exc
 
     # Wipe existing content (publications/talks/projects/skills/tags) and reset config.
     db.query(Publication).delete()
@@ -204,6 +223,7 @@ async def restore_backup(
     config.profile = sc.get("profile", {})
     config.theme = sc.get("theme", {})
     config.features = sc.get("features", {})
+    config.pages = restored_pages
     config.headshot_key = sc.get("headshot_key")
 
     db.commit()

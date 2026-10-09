@@ -22,6 +22,7 @@
     "postcss": "^8.5.29",
     "sanitize-html": "^2.18.0",
     "svelte": "^5.57.2",
+    "svelte-dnd-action": "^0.9.80",
     "svelte-easy-crop": "^5.0.1",
     "tailwindcss": "^4.3.3"
   },

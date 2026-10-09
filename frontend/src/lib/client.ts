@@ -40,8 +40,13 @@ export const api = {
   getAuthMode: () => req<{ mode: "jwt" | "proxy" }>("/api/auth/mode", {}, false),
 
   getConfig: () => req<SiteConfig>("/api/site/config", {}, false),
-  updateConfig: (body: Partial<Pick<SiteConfig, "profile" | "theme" | "features">>) =>
+  updateConfig: (body: Partial<Pick<SiteConfig, "profile" | "theme" | "features" | "pages">>) =>
     jsonReq<SiteConfig>("/api/site/config", "PUT", body),
+  uploadPageImage: (file: File) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return req<{ image_key: string }>("/api/uploads/page-image", { method: "POST", body: fd });
+  },
 
   listTags: () => req<Tag[]>("/api/tags", {}, false),
   createTag: (name: string, color?: string | null) =>

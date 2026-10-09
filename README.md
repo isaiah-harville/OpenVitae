@@ -67,7 +67,8 @@ All config is via environment variables — see [.env.example](.env.example). Ke
 - 📥 Import publications from a **BibTeX** file, an **ORCID** record, or a single **DOI**
   (metadata via Crossref; author lists filled in by DOI). Duplicates are skipped.
 - 🏷️ Tag publications and filter by tag.
-- 🎚️ Toggle site features (about / publications / contact / headshot sections).
+- 🧩 Build the homepage and additional pages from draggable, responsive blocks in **Admin → Pages**. Edit headings, text, images, buttons, page URLs, and navigation visibility. Preview before saving. Existing sites keep their current homepage until a builder layout is published.
+- 🎚️ Toggle legacy homepage sections and the hero portrait.
 
 ## Roadmap
 

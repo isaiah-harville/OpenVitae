@@ -2,6 +2,8 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr
 
+from .page_schema import PageDocument
+
 
 # ---- Shared ----
 class ReorderRequest(BaseModel):
@@ -39,12 +41,14 @@ class SiteConfigBase(BaseModel):
     profile: dict = {}
     theme: dict = {}
     features: dict = {}
+    pages: PageDocument | None = None
 
 
 class SiteConfigUpdate(BaseModel):
     profile: dict | None = None
     theme: dict | None = None
     features: dict | None = None
+    pages: PageDocument | None = None
 
 
 class SiteConfigOut(SiteConfigBase):

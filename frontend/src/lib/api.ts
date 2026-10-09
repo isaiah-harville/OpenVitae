@@ -64,6 +64,7 @@ export type SiteConfig = {
   };
   theme: Record<string, string>;
   features: Record<string, boolean>;
+  pages: PageDocument | null;
   headshot_url?: string | null;
   updated_at?: string | null;
 };
@@ -75,3 +76,5 @@ export type SiteConfig = {
 export function siteName(config: Pick<SiteConfig, "profile"> | null | undefined): string {
   return config?.profile?.siteName?.trim() || config?.profile?.name?.trim() || "OpenVitae";
 }
+
+import type { PageDocument } from "./pages";

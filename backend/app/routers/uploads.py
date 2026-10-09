@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -10,6 +11,43 @@ from ..storage import delete_object, presigned_url, upload_fileobj
 router = APIRouter(prefix="/api/uploads", tags=["uploads"])
 
 IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+
+
+@router.post("/page-image")
+async def upload_page_image(
+    file: UploadFile = File(...),
+    _: User = Depends(get_current_user),
+):
+    if file.content_type not in IMAGE_TYPES:
+        raise HTTPException(status_code=400, detail="Page image must be jpeg, png, webp, or gif")
+    content = await file.read(8 * 1024 * 1024 + 1)
+    if len(content) > 8 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Page image must be under 8 MB")
+    from io import BytesIO
+
+    key = upload_fileobj(
+        BytesIO(content), file.content_type, "page-images", file.filename or "image.png"
+    )
+    return {"image_key": key}
+
+
+@router.get("/page-image/{key:path}")
+def get_page_image(key: str, db: Session = Depends(get_db)):
+    full_key = f"page-images/{key}"
+    config = db.get(SiteConfig, 1)
+    if (
+        not config
+        or not config.pages
+        or not any(
+            block.get("imageKey") == full_key
+            for page in config.pages.get("pages", [])
+            for block in page.get("blocks", [])
+        )
+    ):
+        raise HTTPException(status_code=404, detail="Page image not found")
+    return RedirectResponse(presigned_url(full_key), status_code=302)
+
+
 DOC_TYPES = {"application/pdf"}
 # Slides and similar talk attachments: PDF + common presentation formats.
 SLIDE_TYPES = DOC_TYPES | {

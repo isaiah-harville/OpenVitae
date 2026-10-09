@@ -73,6 +73,8 @@ class SiteConfig(Base):
     theme: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
     # Feature flags: which sections/features of the public site are enabled.
     features: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+    # Null means an existing site still uses the original homepage renderer.
+    pages: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     headshot_key: Mapped[str | None] = mapped_column(String(512), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
