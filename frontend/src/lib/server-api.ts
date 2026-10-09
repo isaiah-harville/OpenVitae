@@ -1,5 +1,14 @@
 import { env } from "$env/dynamic/private";
-import type { Project, Publication, SiteConfig, Skill, Tag, Talk } from "$lib/api";
+import type {
+  BlogPost,
+  BlogPostSummary,
+  Project,
+  Publication,
+  SiteConfig,
+  Skill,
+  Tag,
+  Talk,
+} from "$lib/api";
 
 const base = () =>
   (env.SERVER_API_URL || env.API_INTERNAL_URL || "http://localhost:8000").replace(/\/$/, "");
@@ -11,6 +20,9 @@ async function get<T>(fetcher: typeof fetch, path: string): Promise<T> {
 }
 
 export const serverApi = {
+  blog: (f: typeof fetch) => get<BlogPostSummary[]>(f, "/api/blog"),
+  blogPost: (f: typeof fetch, slug: string) =>
+    get<BlogPost>(f, `/api/blog/${encodeURIComponent(slug)}`),
   config: (f: typeof fetch) => get<SiteConfig>(f, "/api/site/config"),
   publications: (f: typeof fetch, params = new URLSearchParams()) =>
     get<Publication[]>(f, `/api/publications?${params}`),

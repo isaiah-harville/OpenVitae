@@ -18,7 +18,7 @@ BlockType = Literal[
     "talks",
     "contact",
 ]
-RESERVED_SLUGS = {"admin", "api", "projects", "publications", "home", "healthz"}
+RESERVED_SLUGS = {"admin", "api", "blog", "projects", "publications", "home", "healthz"}
 
 
 class PageBlock(BaseModel):

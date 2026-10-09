@@ -1,4 +1,4 @@
-import type { Project, Publication, SiteConfig, Skill, Tag, Talk } from "$lib/api";
+import type { BlogPost, Project, Publication, SiteConfig, Skill, Tag, Talk } from "$lib/api";
 
 function token(): string | null {
   return typeof window !== "undefined" ? localStorage.getItem("ov_token") : null;
@@ -47,6 +47,15 @@ export const api = {
     fd.append("file", file);
     return req<{ image_key: string }>("/api/uploads/page-image", { method: "POST", body: fd });
   },
+
+  listBlogPosts: () => req<BlogPost[]>("/api/blog/posts"),
+  createBlogPost: (body: Pick<BlogPost, "title" | "excerpt" | "content" | "published">) =>
+    jsonReq<BlogPost>("/api/blog/posts", "POST", body),
+  updateBlogPost: (
+    id: number,
+    body: Partial<Pick<BlogPost, "title" | "excerpt" | "content" | "published">>,
+  ) => jsonReq<BlogPost>(`/api/blog/posts/${id}`, "PUT", body),
+  deleteBlogPost: (id: number) => req<void>(`/api/blog/posts/${id}`, { method: "DELETE" }),
 
   listTags: () => req<Tag[]>("/api/tags", {}, false),
   createTag: (name: string, color?: string | null) =>

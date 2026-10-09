@@ -68,6 +68,7 @@ All config is via environment variables — see [.env.example](.env.example). Ke
   (metadata via Crossref; author lists filled in by DOI). Duplicates are skipped.
 - 🏷️ Tag publications and filter by tag.
 - 🧩 Build the homepage and additional pages from draggable, responsive blocks in **Admin → Pages**. Edit headings, text, images, buttons, page URLs, and navigation visibility. Preview before saving. Existing sites keep their current homepage until a builder layout is published.
+- ✍️ Write draft and published Markdown posts in **Admin → Blog**. The built-in `/blog` listing and post pages appear when **Show blog on the public site** is enabled. Drafts stay private, and backups include posts.
 - 🎚️ Toggle legacy homepage sections and the hero portrait.
 
 ## Roadmap

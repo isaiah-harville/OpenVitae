@@ -108,7 +108,7 @@ export function defaultPages(
 export function reservedSlug(slug: string): boolean {
   return (
     !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) ||
-    ["admin", "api", "projects", "publications", "home", "healthz"].includes(slug)
+    ["admin", "api", "blog", "projects", "publications", "home", "healthz"].includes(slug)
   );
 }
 

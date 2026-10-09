@@ -1,6 +1,7 @@
 from datetime import date, datetime
+from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints
 
 from .page_schema import PageDocument
 
@@ -55,6 +56,47 @@ class SiteConfigOut(SiteConfigBase):
     model_config = ConfigDict(from_attributes=True)
     headshot_url: str | None = None
     updated_at: datetime | None = None
+
+
+# ---- Blog ----
+BlogTitle = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=512)]
+
+
+class BlogPostCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    title: BlogTitle
+    excerpt: str = Field(default="", max_length=1000)
+    content: str = Field(default="", max_length=100000)
+    published: bool = False
+
+
+class BlogPostUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    title: BlogTitle | None = None
+    excerpt: str | None = Field(default=None, max_length=1000)
+    content: str | None = Field(default=None, max_length=100000)
+    published: bool | None = None
+
+
+class BlogPostOut(BlogPostCreate):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    slug: str
+    published_at: datetime | None = None
+    created_at: datetime
+
+
+class BlogPostSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    slug: str
+    title: str
+    excerpt: str
+    published_at: datetime
 
 
 # ---- Tags ----

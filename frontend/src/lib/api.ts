@@ -51,6 +51,19 @@ export type Project = {
   screenshot_urls: string[];
 };
 
+export type BlogPost = {
+  id: number;
+  slug: string;
+  title: string;
+  excerpt: string;
+  content: string;
+  published: boolean;
+  published_at: string | null;
+  created_at: string;
+};
+
+export type BlogPostSummary = Pick<BlogPost, "id" | "slug" | "title" | "excerpt" | "published_at">;
+
 export type SiteConfig = {
   profile: {
     name?: string;

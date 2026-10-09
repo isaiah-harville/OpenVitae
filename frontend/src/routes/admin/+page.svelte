@@ -3,7 +3,7 @@
   import { goto } from '$app/navigation';
   import { Button } from '@sivir-ui/svelte';
   import { LogOut } from 'lucide-svelte';
-  import type { Project, Publication, SiteConfig, Skill, Tag, Talk } from '$lib/api';
+  import type { BlogPost, Project, Publication, SiteConfig, Skill, Tag, Talk } from '$lib/api';
   import { api, isAuthed, logout } from '$lib/client';
   import ProfileEditor from '$lib/components/admin/ProfileEditor.svelte';
   import HeadshotEditor from '$lib/components/admin/HeadshotEditor.svelte';
@@ -13,16 +13,18 @@
   import ImportEditor from '$lib/components/admin/ImportEditor.svelte';
   import DataEditor from '$lib/components/admin/DataEditor.svelte';
   import PageBuilder from '$lib/components/admin/PageBuilder.svelte';
+  import BlogEditor from '$lib/components/admin/BlogEditor.svelte';
 
   let config = $state<SiteConfig | null>(null);
   let tags = $state<Tag[]>([]); let publications = $state<Publication[]>([]);
   let talks = $state<Talk[]>([]); let projects = $state<Project[]>([]); let skills = $state<Skill[]>([]);
+  let blogPosts = $state<BlogPost[]>([]);
   let active = $state('profile'); let message = $state(''); let error = $state(false);
-  const tabs = ['profile', 'pages', 'appearance', 'publications', 'talks', 'projects', 'skills', 'tags', 'data'];
+  const tabs = ['profile', 'pages', 'blog', 'appearance', 'publications', 'talks', 'projects', 'skills', 'tags', 'data'];
   function report(value: string, isError = false) { message = value; error = isError; window.setTimeout(() => { if (message === value) message = ''; }, 5000); }
   async function reload() {
-    [config, tags, publications, talks, projects, skills] = await Promise.all([
-      api.getConfig(), api.listTags(), api.listPublications(), api.listTalks(), api.listProjects(), api.listSkills()
+    [config, tags, publications, talks, projects, skills, blogPosts] = await Promise.all([
+      api.getConfig(), api.listTags(), api.listPublications(), api.listTalks(), api.listProjects(), api.listSkills(), api.listBlogPosts()
     ]);
   }
   onMount(() => {
@@ -44,6 +46,7 @@
         {#if active === 'profile'}<ProfileEditor {config} updated={(value) => config = value} {report}/><HeadshotEditor {config} updated={(value) => config = value} {report}/><FeatureEditor {config} updated={(value) => config = value} {report}/>{/if}
         {#if active === 'appearance'}<AppearanceEditor {config} updated={(value) => config = value} {report}/>{/if}
         {#if active === 'pages'}<PageBuilder {config} content={{ publications, talks, projects, skills }} updated={(value) => config = value} {report}/>{/if}
+        {#if active === 'blog'}<BlogEditor {config} posts={blogPosts} updated={(value) => config = value} {reload} {report}/>{/if}
         {#if active === 'publications'}<ImportEditor {reload} {report}/><EntityEditor kind="publications" items={publications} {tags} {reload} {report}/>{/if}
         {#if active === 'talks'}<EntityEditor kind="talks" items={talks} {reload} {report}/>{/if}
         {#if active === 'projects'}<EntityEditor kind="projects" items={projects} {tags} {skills} {reload} {report}/>{/if}

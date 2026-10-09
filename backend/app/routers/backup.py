@@ -9,14 +9,14 @@ from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models import Project, Publication, SiteConfig, Skill, Tag, Talk, User
+from ..models import BlogPost, Project, Publication, SiteConfig, Skill, Tag, Talk, User
 from ..page_schema import PageDocument
 from ..security import get_current_user
 from ..storage import download_bytes, put_bytes
 
 router = APIRouter(prefix="/api", tags=["backup"])
 
-BACKUP_VERSION = 2
+BACKUP_VERSION = 3
 
 
 def _iso(value):
@@ -34,6 +34,7 @@ def export_backup(db: Session = Depends(get_db), _: User = Depends(get_current_u
     talks = db.query(Talk).all()
     projects = db.query(Project).all()
     skills = db.query(Skill).all()
+    blog_posts = db.query(BlogPost).all()
 
     asset_keys: list[str] = []
     if config and config.headshot_key:
@@ -115,6 +116,18 @@ def export_backup(db: Session = Depends(get_db), _: User = Depends(get_current_u
             }
             for s in skills
         ],
+        "blog_posts": [
+            {
+                "slug": post.slug,
+                "title": post.title,
+                "excerpt": post.excerpt,
+                "content": post.content,
+                "published": post.published,
+                "published_at": _iso(post.published_at),
+                "created_at": _iso(post.created_at),
+            }
+            for post in blog_posts
+        ],
         "assets": [],
     }
 
@@ -152,7 +165,7 @@ async def restore_backup(
     except (zipfile.BadZipFile, KeyError, json.JSONDecodeError) as exc:
         raise HTTPException(status_code=400, detail="Invalid backup file") from exc
 
-    if data.get("version") != BACKUP_VERSION:
+    if data.get("version") not in (2, BACKUP_VERSION):
         raise HTTPException(status_code=400, detail="Unsupported backup version")
 
     restored_pages = data.get("site_config", {}).get("pages")
@@ -170,6 +183,7 @@ async def restore_backup(
     db.query(Project).delete()
     db.query(Skill).delete()
     db.query(Tag).delete()
+    db.query(BlogPost).delete()
     db.flush()
 
     # Re-upload assets, preserving their original keys.
@@ -214,6 +228,23 @@ async def restore_backup(
         project.tags = [tags_by_slug[s] for s in tag_slugs if s in tags_by_slug]
         project.skills = [skills_by_slug[s] for s in skill_slugs if s in skills_by_slug]
         db.add(project)
+
+    for post in data.get("blog_posts", []):
+        db.add(
+            BlogPost(
+                slug=post["slug"],
+                title=post["title"],
+                excerpt=post.get("excerpt", ""),
+                content=post.get("content", ""),
+                published=post.get("published", False),
+                published_at=datetime.fromisoformat(post["published_at"])
+                if post.get("published_at")
+                else None,
+                created_at=datetime.fromisoformat(post["created_at"])
+                if post.get("created_at")
+                else None,
+            )
+        )
 
     config = db.get(SiteConfig, 1)
     if config is None:

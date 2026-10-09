@@ -169,3 +169,16 @@ class Project(Base):
 
     tags: Mapped[list[Tag]] = relationship(secondary=project_tags, back_populates="projects")
     skills: Mapped[list[Skill]] = relationship(secondary=project_skills, back_populates="projects")
+
+
+class BlogPost(Base):
+    __tablename__ = "blog_posts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    slug: Mapped[str] = mapped_column(String(512), unique=True, index=True, nullable=False)
+    title: Mapped[str] = mapped_column(String(512), nullable=False)
+    excerpt: Mapped[str] = mapped_column(String(1000), default="", nullable=False)
+    content: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    published: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

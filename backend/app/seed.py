@@ -15,6 +15,7 @@ DEFAULT_THEME = {
 }
 
 DEFAULT_FEATURES = {
+    "blog": False,
     "publications": True,
     "about": True,
     "contact": True,
