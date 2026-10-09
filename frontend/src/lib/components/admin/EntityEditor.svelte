@@ -101,4 +101,4 @@
   <div class="mt-7 flex gap-2"><Button onclick={save} loading={busy}>Save</Button><Button variant="quiet" onclick={() => editing = null}>Cancel</Button></div>
 </Card.Root>
 {/if}
-<style>.admin-icon { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: .5rem; } .admin-icon:hover { background: var(--site-accent-soft); } .admin-icon:disabled { opacity: .25; } .chosen { background: var(--site-accent); color: white; }</style>
+<style>.admin-icon { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: .5rem; } .admin-icon:hover { background: var(--site-accent-soft); } .admin-icon:disabled { opacity: .25; } .chosen { background: var(--site-accent); color: var(--site-on-accent); }</style>

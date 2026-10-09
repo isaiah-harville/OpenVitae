@@ -2,20 +2,25 @@
 @plugin "@tailwindcss/typography";
 
 :root {
-  --site-accent: #7957e8;
+  --site-accent: #171717;
+  --site-on-accent: #fff;
+  --color-primary: var(--site-accent);
+  --color-on-primary: var(--site-on-accent);
+  --color-accent-tint: color-mix(in srgb, var(--site-accent) 11%, white);
   --site-accent-soft: color-mix(in srgb, var(--site-accent) 11%, transparent);
-  --site-paper: #f7f6f3;
-  --site-ink: #201d2c;
-  --site-muted: #686479;
-  --site-line: #e5e1ed;
+  --site-paper: #f7f7f6;
+  --site-ink: #171717;
+  --site-muted: #626262;
+  --site-line: #e2e2e0;
   --site-surface: #fff;
 }
 .dark {
-  --site-paper: #13111b;
-  --site-ink: #f5f1fb;
-  --site-muted: #aaa4bb;
-  --site-line: #353042;
-  --site-surface: #1c1926;
+  --color-accent-tint: color-mix(in srgb, var(--site-accent) 15%, #1b1b1b);
+  --site-paper: #111;
+  --site-ink: #f5f5f4;
+  --site-muted: #adadab;
+  --site-line: #343434;
+  --site-surface: #1b1b1b;
 }
 [data-palette="blue"] {
   --site-accent: #3478ea;
@@ -36,10 +41,14 @@
   --site-accent: #288b69;
 }
 [data-palette="teal"] {
-  --site-accent: #269c9b;
+  --site-accent: #0f766e;
 }
 [data-palette="neutral"] {
-  --site-accent: #6d6580;
+  --site-accent: #171717;
+}
+.dark[data-palette="neutral"] {
+  --site-accent: #f5f5f4;
+  --site-on-accent: #171717;
 }
 body {
   background: var(--site-paper);
@@ -59,7 +68,7 @@ a {
 .site-card {
   background: var(--site-surface);
   border: 1px solid var(--site-line);
-  box-shadow: 0 16px 45px -36px #4b326b88;
+  box-shadow: 0 16px 45px -36px #17171780;
 }
 .site-card:hover {
   border-color: color-mix(in srgb, var(--site-accent) 45%, var(--site-line));
@@ -83,7 +92,7 @@ a {
 }
 .site-action {
   background: var(--site-accent);
-  color: white;
+  color: var(--site-on-accent);
   border-radius: 999px;
   padding: 0.78rem 1.25rem;
   font-size: 0.88rem;
@@ -94,7 +103,7 @@ a {
 }
 .site-action:hover {
   filter: brightness(1.1);
-  color: white;
+  color: var(--site-on-accent);
   transform: translateY(-2px);
 }
 .site-chip {
@@ -126,6 +135,9 @@ a {
   margin-bottom: 0.4rem;
 }
 .prose {
+  color: var(--site-ink);
+}
+.prose :is(strong, b, h1, h2, h3, h4) {
   color: var(--site-ink);
 }
 .prose a {
