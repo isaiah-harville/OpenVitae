@@ -5,7 +5,7 @@
   import { dndzone, type DndEvent } from 'svelte-dnd-action';
   import type { Project, Publication, SiteConfig, Skill, Talk } from '$lib/api';
   import { api } from '$lib/client';
-  import { BLOCK_TYPES, createBlock, defaultPages, moveBlock, pagePath, reservedSlug, type PageBlock, type PageDocument } from '$lib/pages';
+  import { BLOCK_TYPES, copyPages, createBlock, defaultPages, moveBlock, pagePath, reservedSlug, type PageBlock, type PageDocument } from '$lib/pages';
   import PageBlocks from '../public/PageBlocks.svelte';
   import BlockSettings from './BlockSettings.svelte';
 
@@ -15,7 +15,7 @@
     updated: (config: SiteConfig) => void;
     report: (message: string, error?: boolean) => void;
   } = $props();
-  let document = $state<PageDocument>(untrack(() => structuredClone(config.pages ?? defaultPages(config.features, {
+  let document = $state<PageDocument>(untrack(() => copyPages(config.pages ?? defaultPages(config.features, {
     skills: content.skills.length, projects: content.projects.length, talks: content.talks.length,
     hasBio: Boolean(config.profile.bio), hasContact: Boolean(config.profile.email || config.profile.links?.length),
   }))));

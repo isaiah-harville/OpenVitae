@@ -1,5 +1,13 @@
 import { expect, test } from "bun:test";
-import { defaultPages, moveBlock, pagePath, reservedSlug } from "./pages";
+import { copyPages, defaultPages, moveBlock, pagePath, reservedSlug } from "./pages";
+
+test("saved reactive pages can be copied for editing", () => {
+  const saved = new Proxy(defaultPages({ projects: true }), {});
+  const editable = copyPages(saved);
+  expect(editable).toEqual(saved);
+  editable.pages[0].title = "Edited home";
+  expect(saved.pages[0].title).toBe("Home");
+});
 
 test("existing site starts with its visible homepage blocks", () => {
   const pages = defaultPages({ about: true, publications: false, projects: true });

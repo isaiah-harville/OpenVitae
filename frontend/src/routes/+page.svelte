@@ -5,6 +5,7 @@
   import PublicationCard from '$lib/components/public/PublicationCard.svelte';
   import PageBlocks from '$lib/components/public/PageBlocks.svelte';
   import ProjectCard from '$lib/components/public/ProjectCard.svelte';
+  import ProfileLinks from '$lib/components/public/ProfileLinks.svelte';
   import SectionTitle from '$lib/components/public/SectionTitle.svelte';
   import TagChip from '$lib/components/public/TagChip.svelte';
   import type { PageData } from './$types';
@@ -18,7 +19,7 @@
     ...(features.publications !== false ? ['publications'] : []),
     ...(features.projects !== false && data.projects.length ? ['projects'] : []),
     ...(features.talks !== false && data.talks.length ? ['talks'] : []),
-    ...(features.contact !== false && (profile.email || profile.links?.length) ? ['contact'] : [])
+    ...(features.contact !== false && profile.email ? ['contact'] : [])
   ]);
   const pages = $derived(config?.theme?.layout === 'pages');
 </script>
@@ -66,8 +67,11 @@
       {#if sections.includes('talks') && (!pages || active === 'talks')}
         <section id="talks"><SectionTitle label="04 / On stage" title="Talks & appearances"/><div class="grid gap-4 md:grid-cols-2">{#each data.talks as talk (talk.id)}<div class="site-card rounded-2xl p-6"><p class="site-eyebrow mb-3">{[talk.event, talk.event_date].filter(Boolean).join(' · ')}</p><h3 class="text-xl font-bold">{talk.title}</h3>{#if talk.description}<p class="site-copy mt-3 text-sm">{talk.description}</p>{/if}<div class="mt-5 flex gap-4 text-sm font-bold text-[var(--site-accent)]">{#if talk.url}<a href={talk.url} target="_blank" rel="noreferrer">Watch ↗</a>{/if}{#if talk.file_url}<a href={talk.file_url} target="_blank" rel="noreferrer">Slides ↗</a>{/if}</div></div>{/each}</div></section>
       {/if}
+      {#if profile.links?.length}
+        <ProfileLinks links={profile.links}/>
+      {/if}
       {#if sections.includes('contact') && (!pages || active === 'contact')}
-        <section id="contact" class="rounded-[2rem] bg-[var(--site-accent)] p-8 text-[var(--site-on-accent)] md:p-14"><p class="mb-3 text-xs font-bold uppercase tracking-[.2em] opacity-70">05 / Let's connect</p><h2 class="max-w-xl text-4xl font-extrabold tracking-tight md:text-5xl">Have something in mind? Let's talk.</h2><div class="mt-8 flex flex-wrap gap-4">{#if profile.email}<a class="inline-flex items-center gap-2 rounded-full bg-[var(--site-paper)] px-5 py-3 text-sm font-bold text-[var(--site-ink)]" href={`mailto:${profile.email}`}><Mail size={16}/>{profile.email}</a>{/if}{#each profile.links || [] as link}<a class="inline-flex items-center gap-1 rounded-full border border-current/40 px-5 py-3 text-sm font-bold" href={link.url} target="_blank" rel="noreferrer">{link.label} ↗</a>{/each}</div></section>
+        <section id="contact" class="rounded-[2rem] bg-[var(--site-accent)] p-8 text-[var(--site-on-accent)] md:p-14"><p class="mb-3 text-xs font-bold uppercase tracking-[.2em] opacity-70">05 / Let's connect</p><h2 class="max-w-xl text-4xl font-extrabold tracking-tight md:text-5xl">Have something in mind? Let's talk.</h2><div class="mt-8 flex flex-wrap gap-4">{#if profile.email}<a class="inline-flex items-center gap-2 rounded-full bg-[var(--site-paper)] px-5 py-3 text-sm font-bold text-[var(--site-ink)]" href={`mailto:${profile.email}`}><Mail size={16}/>{profile.email}</a>{/if}</div></section>
       {/if}
     </div>
   </div>

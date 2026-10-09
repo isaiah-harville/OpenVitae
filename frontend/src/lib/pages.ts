@@ -35,6 +35,11 @@ export type SitePage = {
 };
 export type PageDocument = { version: 1; pages: SitePage[] };
 
+export function copyPages(pages: PageDocument): PageDocument {
+  // Page documents are JSON data; JSON cloning unwraps Svelte's reactive proxies.
+  return JSON.parse(JSON.stringify(pages)) as PageDocument;
+}
+
 const defaults: Record<BlockType, Pick<PageBlock, "heading" | "eyebrow" | "text" | "width">> = {
   hero: { heading: "", eyebrow: "Hello, I'm", text: "", width: 2 },
   about: { heading: "A little about me", eyebrow: "The story", text: "", width: 2 },

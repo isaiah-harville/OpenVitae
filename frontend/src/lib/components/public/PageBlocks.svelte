@@ -6,6 +6,7 @@
   import { markdown } from '$lib/markdown';
   import ProjectCard from './ProjectCard.svelte';
   import PublicationCard from './PublicationCard.svelte';
+  import ProfileLinks from './ProfileLinks.svelte';
   import SectionTitle from './SectionTitle.svelte';
   import TagChip from './TagChip.svelte';
 
@@ -34,7 +35,7 @@
             {#if config.features.headshot !== false}<div class="mx-auto grid size-44 place-items-center overflow-hidden rounded-full border border-[var(--site-line)] bg-[var(--site-paper)] md:size-56">{#if config.headshot_url}<img src={config.headshot_url} alt={profile.name || 'Portrait'} class="size-full object-cover"/>{:else}<span class="text-7xl font-black">{(profile.name || 'V').slice(0, 1)}</span>{/if}</div>{/if}
           </div>
         {:else if block.type === 'contact'}
-          <div class="rounded-[2rem] bg-[var(--site-accent)] p-8 text-[var(--site-on-accent)] md:p-12"><p class="mb-4 text-xs font-bold uppercase tracking-[.2em] opacity-70">{block.eyebrow}</p><h2 class="max-w-2xl text-4xl font-extrabold tracking-tight">{block.heading}</h2>{#if block.text}<p class="mt-4 max-w-xl">{block.text}</p>{/if}<div class="mt-8 flex flex-wrap gap-3">{#if profile.email}<a class="rounded-full bg-[var(--site-paper)] px-5 py-3 text-sm font-bold text-[var(--site-ink)]" href={`mailto:${profile.email}`}><Mail size={15} class="mr-2 inline"/>{profile.email}</a>{/if}{#each profile.links || [] as link}<a class="rounded-full border border-current/40 px-5 py-3 text-sm font-bold" href={link.url} target="_blank" rel="noreferrer">{link.label} ↗</a>{/each}</div></div>
+          <div class="rounded-[2rem] bg-[var(--site-accent)] p-8 text-[var(--site-on-accent)] md:p-12"><p class="mb-4 text-xs font-bold uppercase tracking-[.2em] opacity-70">{block.eyebrow}</p><h2 class="max-w-2xl text-4xl font-extrabold tracking-tight">{block.heading}</h2>{#if block.text}<p class="mt-4 max-w-xl">{block.text}</p>{/if}<div class="mt-8 flex flex-wrap gap-3">{#if profile.email}<a class="rounded-full bg-[var(--site-paper)] px-5 py-3 text-sm font-bold text-[var(--site-ink)]" href={`mailto:${profile.email}`}><Mail size={15} class="mr-2 inline"/>{profile.email}</a>{/if}</div></div>
         {:else}
           <div class="site-card h-full rounded-[1.7rem] p-7 md:p-9">
             {#if block.type !== 'image'}<SectionTitle label={block.eyebrow} title={block.heading} detail={block.type === 'publications' ? block.text : undefined}/>{/if}
@@ -53,4 +54,7 @@
       </section>
     {/each}
   </div>
+  {#if page.slug === 'home' && profile.links?.length}
+    <div class="mt-8"><ProfileLinks links={profile.links}/></div>
+  {/if}
 </main>
