@@ -1,9 +1,9 @@
 from datetime import UTC, datetime, timedelta
 
 import bcrypt
+import jwt
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
 from .config import get_settings
@@ -76,7 +76,7 @@ def _user_from_jwt(token: str | None, db: Session) -> User:
         email: str | None = payload.get("sub")
         if email is None:
             raise CREDENTIALS_EXCEPTION
-    except JWTError as exc:
+    except jwt.PyJWTError as exc:
         raise CREDENTIALS_EXCEPTION from exc
 
     user = db.query(User).filter(User.email == email).first()

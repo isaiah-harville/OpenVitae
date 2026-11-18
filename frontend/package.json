@@ -12,15 +12,15 @@
   },
   "dependencies": {
     "@sivir-ui/svelte": "^0.4.3",
-    "@sveltejs/adapter-node": "^5.5.7",
-    "@sveltejs/kit": "^2.70.3",
+    "@sveltejs/adapter-node": "^5.5.8",
+    "@sveltejs/kit": "^2.70.4",
     "@sveltejs/vite-plugin-svelte": "^5.1.1",
     "@tailwindcss/postcss": "^4.3.3",
     "@tailwindcss/typography": "^0.5.20",
     "lucide-svelte": "^1.0.1",
     "marked": "^18.1.0",
     "postcss": "^8.5.29",
-    "sanitize-html": "^2.18.0",
+    "sanitize-html": "^2.18.1",
     "svelte": "^5.57.2",
     "svelte-dnd-action": "^0.9.80",
     "svelte-easy-crop": "^5.0.1",
@@ -32,7 +32,10 @@
     "@types/sanitize-html": "^2.16.2",
     "svelte-check": "^4.7.6",
     "typescript": "~5.9.3",
-    "vite": "^6.4.4"
+    "vite": "^6.4.5"
   },
-  "type": "module"
+  "type": "module",
+  "overrides": {
+    "postcss-selector-parser": "6.1.5"
+  }
 }
