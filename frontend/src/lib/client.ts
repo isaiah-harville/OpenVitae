@@ -1,4 +1,4 @@
-import type { BlogPost, Project, Publication, SiteConfig, Skill, Tag, Talk } from "$lib/api";
+import type { BlogPost, Project, Publication, SiteConfig, Skill, Tag, Talk } from "#lib/api.ts";
 
 function token(): string | null {
   return typeof window !== "undefined" ? localStorage.getItem("ov_token") : null;

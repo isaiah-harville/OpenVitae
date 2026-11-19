@@ -1,8 +1,8 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { Card } from '@sivir-ui/svelte';
-  import type { SiteConfig } from '$lib/api';
-  import { api } from '$lib/client';
+  import type { SiteConfig } from '#lib/api.ts';
+  import { api } from '#lib/client.ts';
   let { config, updated, report }: { config: SiteConfig; updated: (config: SiteConfig) => void; report: (message: string, error?: boolean) => void } = $props();
   let features = $state(untrack(() => ({ ...config.features })));
   const labels = $derived(config.pages

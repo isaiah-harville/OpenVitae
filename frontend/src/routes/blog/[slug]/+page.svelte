@@ -1,7 +1,7 @@
 <script lang="ts">
   import { ArrowLeft } from 'lucide-svelte';
-  import { blogDate } from '$lib/blog';
-  import { markdown } from '$lib/markdown';
+  import { blogDate } from '#lib/blog.ts';
+  import { markdown } from '#lib/markdown.ts';
   import type { PageData } from './$types';
   let { data }: { data: PageData } = $props();
   const post = $derived(data.post);

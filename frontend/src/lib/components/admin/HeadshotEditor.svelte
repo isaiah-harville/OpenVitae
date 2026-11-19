@@ -3,8 +3,8 @@
   import { Button, Card } from '@sivir-ui/svelte';
   import Cropper from 'svelte-easy-crop';
   import type { CropArea } from 'svelte-easy-crop';
-  import type { SiteConfig } from '$lib/api';
-  import { api } from '$lib/client';
+  import type { SiteConfig } from '#lib/api.ts';
+  import { api } from '#lib/client.ts';
 
   let { config, updated, report }: {
     config: SiteConfig;

@@ -7,34 +7,37 @@
     "build": "vite build && bun scripts/copy-fonts.ts",
     "preview": "vite preview --host 0.0.0.0 --port 3000",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-    "lint": "biome check src vite.config.ts svelte.config.js scripts",
+    "lint": "biome check src vite.config.ts scripts",
     "test": "bun test"
   },
   "dependencies": {
     "@sivir-ui/svelte": "^0.4.3",
-    "@sveltejs/adapter-node": "^5.5.8",
-    "@sveltejs/kit": "^2.70.4",
-    "@sveltejs/vite-plugin-svelte": "^5.1.1",
-    "@tailwindcss/postcss": "^4.3.3",
+    "@sveltejs/adapter-node": "^6.0.5",
+    "@sveltejs/kit": "^3.4.0",
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@tailwindcss/typography": "^0.5.20",
+    "@tailwindcss/vite": "^4.3.5",
     "lucide-svelte": "^1.0.1",
     "marked": "^18.1.0",
-    "postcss": "^8.5.29",
     "sanitize-html": "^2.18.1",
     "svelte": "^5.57.2",
     "svelte-dnd-action": "^0.9.80",
     "svelte-easy-crop": "^5.0.1",
-    "tailwindcss": "^4.3.3"
+    "tailwindcss": "^4.3.5"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",
     "@types/bun": "^1.4.2",
     "@types/sanitize-html": "^2.16.2",
-    "svelte-check": "^4.7.6",
-    "typescript": "~5.9.3",
-    "vite": "^6.4.5"
+    "svelte-check": "^4.7.8",
+    "typescript": "^6.0.3",
+    "vite": "^8.3.8"
   },
   "type": "module",
+  "imports": {
+    "#lib": "./src/lib",
+    "#lib/*": "./src/lib/*"
+  },
   "overrides": {
     "postcss-selector-parser": "6.1.5"
   }

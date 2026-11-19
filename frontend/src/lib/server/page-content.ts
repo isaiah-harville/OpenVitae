@@ -1,5 +1,5 @@
-import type { SiteConfig } from "$lib/api";
-import { serverApi } from "$lib/server-api";
+import type { SiteConfig } from "#lib/api.ts";
+import { serverApi } from "#lib/server-api.ts";
 
 export async function loadPageContent(fetcher: typeof fetch, config: SiteConfig | null) {
   const features = config?.features ?? {};

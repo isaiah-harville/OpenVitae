@@ -1,4 +1,3 @@
-import { env } from "$env/dynamic/private";
 import type {
   BlogPost,
   BlogPostSummary,
@@ -8,10 +7,11 @@ import type {
   Skill,
   Tag,
   Talk,
-} from "$lib/api";
+} from "#lib/api.ts";
+import { API_INTERNAL_URL, SERVER_API_URL } from "$app/env/private";
 
 const base = () =>
-  (env.SERVER_API_URL || env.API_INTERNAL_URL || "http://localhost:8000").replace(/\/$/, "");
+  (SERVER_API_URL || API_INTERNAL_URL || "http://localhost:8000").replace(/\/$/, "");
 
 async function get<T>(fetcher: typeof fetch, path: string): Promise<T> {
   const response = await fetcher(`${base()}${path}`, { cache: "no-store" });

@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { Button, Card, Input } from '@sivir-ui/svelte';
-  import { api } from '$lib/client';
+  import { api } from '#lib/client.ts';
   let email = $state('');
   let password = $state('');
   let message = $state('');

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { ArrowUpRight } from 'lucide-svelte';
-  import { blogDate } from '$lib/blog';
+  import { blogDate } from '#lib/blog.ts';
   import type { PageData } from './$types';
   let { data }: { data: PageData } = $props();
 </script>

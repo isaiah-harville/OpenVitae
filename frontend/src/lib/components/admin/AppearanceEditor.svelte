@@ -1,9 +1,9 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { Button, Card } from '@sivir-ui/svelte';
-  import type { SiteConfig } from '$lib/api';
-  import { api } from '$lib/client';
-  import { DEFAULT_PALETTE, PALETTES, type ThemeConfig } from '$lib/palettes';
+  import type { SiteConfig } from '#lib/api.ts';
+  import { api } from '#lib/client.ts';
+  import { DEFAULT_PALETTE, PALETTES, type ThemeConfig } from '#lib/palettes.ts';
   let { config, updated, report }: { config: SiteConfig; updated: (config: SiteConfig) => void; report: (message: string, error?: boolean) => void } = $props();
   let theme = $state<ThemeConfig>(untrack(() => ({ palette: DEFAULT_PALETTE, ...config.theme })));
   let busy = $state(false);

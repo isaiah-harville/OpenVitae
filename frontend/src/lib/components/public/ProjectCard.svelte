@@ -1,7 +1,7 @@
 <script lang="ts">
   import { ArrowUpRight } from 'lucide-svelte';
   import { Card } from '@sivir-ui/svelte';
-  import type { Project } from '$lib/api';
+  import type { Project } from '#lib/api.ts';
   import TagChip from './TagChip.svelte';
   let { project }: { project: Project } = $props();
 </script>

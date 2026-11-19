@@ -3,17 +3,17 @@
   import { goto } from '$app/navigation';
   import { Button } from '@sivir-ui/svelte';
   import { LogOut } from 'lucide-svelte';
-  import type { BlogPost, Project, Publication, SiteConfig, Skill, Tag, Talk } from '$lib/api';
-  import { api, isAuthed, logout } from '$lib/client';
-  import ProfileEditor from '$lib/components/admin/ProfileEditor.svelte';
-  import HeadshotEditor from '$lib/components/admin/HeadshotEditor.svelte';
-  import FeatureEditor from '$lib/components/admin/FeatureEditor.svelte';
-  import AppearanceEditor from '$lib/components/admin/AppearanceEditor.svelte';
-  import EntityEditor from '$lib/components/admin/EntityEditor.svelte';
-  import ImportEditor from '$lib/components/admin/ImportEditor.svelte';
-  import DataEditor from '$lib/components/admin/DataEditor.svelte';
-  import PageBuilder from '$lib/components/admin/PageBuilder.svelte';
-  import BlogEditor from '$lib/components/admin/BlogEditor.svelte';
+  import type { BlogPost, Project, Publication, SiteConfig, Skill, Tag, Talk } from '#lib/api.ts';
+  import { api, isAuthed, logout } from '#lib/client.ts';
+  import ProfileEditor from '#lib/components/admin/ProfileEditor.svelte';
+  import HeadshotEditor from '#lib/components/admin/HeadshotEditor.svelte';
+  import FeatureEditor from '#lib/components/admin/FeatureEditor.svelte';
+  import AppearanceEditor from '#lib/components/admin/AppearanceEditor.svelte';
+  import EntityEditor from '#lib/components/admin/EntityEditor.svelte';
+  import ImportEditor from '#lib/components/admin/ImportEditor.svelte';
+  import DataEditor from '#lib/components/admin/DataEditor.svelte';
+  import PageBuilder from '#lib/components/admin/PageBuilder.svelte';
+  import BlogEditor from '#lib/components/admin/BlogEditor.svelte';
 
   let config = $state<SiteConfig | null>(null);
   let tags = $state<Tag[]>([]); let publications = $state<Publication[]>([]);

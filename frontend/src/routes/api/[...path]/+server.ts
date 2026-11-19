@@ -1,4 +1,4 @@
-import { env } from "$env/dynamic/private";
+import { API_INTERNAL_URL, SERVER_API_URL } from "$app/env/private";
 import type { RequestHandler } from "./$types";
 
 const strip = new Set([
@@ -10,10 +10,7 @@ const strip = new Set([
 ]);
 
 const proxy: RequestHandler = async ({ request, params, url, fetch }) => {
-  const base = (env.API_INTERNAL_URL || env.SERVER_API_URL || "http://localhost:8000").replace(
-    /\/$/,
-    "",
-  );
+  const base = (API_INTERNAL_URL || SERVER_API_URL || "http://localhost:8000").replace(/\/$/, "");
   const headers = new Headers();
   request.headers.forEach((value, key) => {
     if (!strip.has(key.toLowerCase())) headers.set(key, value);

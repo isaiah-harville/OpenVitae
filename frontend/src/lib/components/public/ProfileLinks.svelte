@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { SiteConfig } from '$lib/api';
+  import type { SiteConfig } from '#lib/api.ts';
 
   let { links, heading = 'Links' }: { links: NonNullable<SiteConfig['profile']['links']>; heading?: string } = $props();
 </script>

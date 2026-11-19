@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Button, Card } from '@sivir-ui/svelte';
-  import { api } from '$lib/client';
+  import { api } from '#lib/client.ts';
   let { reload, report }: { reload: () => Promise<void>; report: (message: string, error?: boolean) => void } = $props();
   let doi = $state(''); let orcid = $state(''); let bibtex = $state(''); let busy = $state(false);
   async function run(task: () => Promise<{ created: number; skipped: number }>) { busy = true; try { const result = await task(); await reload(); report(`Imported ${result.created}; skipped ${result.skipped}`); } catch (error) { report(String(error), true); } finally { busy = false; } }
