@@ -12,12 +12,12 @@ dependencies = [
     "pydantic>=2.10.4",
     "pydantic-settings>=2.7.1",
     "pydantic[email]>=2.10.4",
-    "python-jose[cryptography]>=3.3.0",
     "bcrypt>=4.2.1",
     "python-multipart>=0.0.20",
     "boto3>=1.35.92",
     "alembic>=1.18.4",
     "bibtexparser>=1.4.4",
+    "pyjwt>=2.15.1",
 ]
 
 [dependency-groups]
