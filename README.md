@@ -8,7 +8,7 @@ theme, manage your papers with tags, and toggle features — all from a `/admin`
 
 | Service    | Tech                          | Purpose                                            |
 | ---------- | ----------------------------- | -------------------------------------------------- |
-| `frontend` | SvelteKit 2, Sivir UI, Tailwind v4 | Public CV site + `/admin` dashboard |
+| `frontend` | SvelteKit 3, Sivir UI, Tailwind v4 | Public CV site + `/admin` dashboard |
 | `api`      | FastAPI (Python 3.12, uv)     | Auth, site config, publications/tags, file uploads |
 | `db`       | PostgreSQL 17                 | Relational data                                    |
 | `minio`    | MinIO (S3-compatible)         | Object storage for headshots & paper PDFs          |

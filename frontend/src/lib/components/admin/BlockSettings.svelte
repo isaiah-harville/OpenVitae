@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Button } from '@sivir-ui/svelte';
-  import type { PageBlock } from '$lib/pages';
-  import { api } from '$lib/client';
+  import type { PageBlock } from '#lib/pages.ts';
+  import { api } from '#lib/client.ts';
   let { block, report }: { block: PageBlock; report: (message: string, error?: boolean) => void } = $props();
   let uploading = $state(false);
   async function upload(file: File) {

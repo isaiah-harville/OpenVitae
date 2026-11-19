@@ -1,7 +1,7 @@
 <script lang="ts">
   import { ArrowLeft, ArrowUpRight } from 'lucide-svelte';
-  import { markdown } from '$lib/markdown';
-  import TagChip from '$lib/components/public/TagChip.svelte';
+  import { markdown } from '#lib/markdown.ts';
+  import TagChip from '#lib/components/public/TagChip.svelte';
   import type { PageData } from './$types';
   let { data }: { data: PageData } = $props();
   const project = $derived(data.project);

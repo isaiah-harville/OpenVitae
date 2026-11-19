@@ -1,6 +1,6 @@
 <script lang="ts">
   import { ArrowLeft } from 'lucide-svelte';
-  import PublicationCard from '$lib/components/public/PublicationCard.svelte';
+  import PublicationCard from '#lib/components/public/PublicationCard.svelte';
   import type { PageData } from './$types';
   let { data }: { data: PageData } = $props();
 </script>

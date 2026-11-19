@@ -1,16 +1,16 @@
 <script lang="ts">
   import { ArrowRight, ArrowUpRight, Mail, MapPin, Sparkles } from 'lucide-svelte';
-  import { markdown } from '$lib/markdown';
+  import { markdown } from '#lib/markdown.ts';
   import { Button } from '@sivir-ui/svelte/components/button';
-  import PublicationCard from '$lib/components/public/PublicationCard.svelte';
-  import PageBlocks from '$lib/components/public/PageBlocks.svelte';
-  import ProjectCard from '$lib/components/public/ProjectCard.svelte';
-  import ProfileLinks from '$lib/components/public/ProfileLinks.svelte';
-  import ProfileEducation from '$lib/components/public/ProfileEducation.svelte';
-  import SectionTitle from '$lib/components/public/SectionTitle.svelte';
-  import TagChip from '$lib/components/public/TagChip.svelte';
+  import PublicationCard from '#lib/components/public/PublicationCard.svelte';
+  import PageBlocks from '#lib/components/public/PageBlocks.svelte';
+  import ProjectCard from '#lib/components/public/ProjectCard.svelte';
+  import ProfileLinks from '#lib/components/public/ProfileLinks.svelte';
+  import ProfileEducation from '#lib/components/public/ProfileEducation.svelte';
+  import SectionTitle from '#lib/components/public/SectionTitle.svelte';
+  import TagChip from '#lib/components/public/TagChip.svelte';
   import type { PageData } from './$types';
-  import { migratePages } from '$lib/pages';
+  import { migratePages } from '#lib/pages.ts';
   let { data }: { data: PageData } = $props();
   const config = $derived(data.config);
   const profile = $derived(config?.profile ?? {});

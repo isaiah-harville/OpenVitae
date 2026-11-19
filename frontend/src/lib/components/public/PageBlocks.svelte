@@ -1,9 +1,9 @@
 <script lang="ts">
   import { ArrowRight, ArrowUpRight, Mail, MapPin } from 'lucide-svelte';
   import { Button } from '@sivir-ui/svelte/components/button';
-  import type { Project, Publication, SiteConfig, Skill, Talk } from '$lib/api';
-  import type { PageBlock, SitePage } from '$lib/pages';
-  import { markdown } from '$lib/markdown';
+  import type { Project, Publication, SiteConfig, Skill, Talk } from '#lib/api.ts';
+  import type { PageBlock, SitePage } from '#lib/pages.ts';
+  import { markdown } from '#lib/markdown.ts';
   import ProjectCard from './ProjectCard.svelte';
   import PublicationCard from './PublicationCard.svelte';
   import ProfileLinks from './ProfileLinks.svelte';

@@ -1,8 +1,8 @@
 <script lang="ts">
   import { Button, Card } from '@sivir-ui/svelte';
   import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-svelte';
-  import type { Project, Publication, Skill, Tag, Talk } from '$lib/api';
-  import { api } from '$lib/client';
+  import type { Project, Publication, Skill, Tag, Talk } from '#lib/api.ts';
+  import { api } from '#lib/client.ts';
   import Field from './Field.svelte';
 
   type Entity = Publication | Talk | Project | Skill | Tag;

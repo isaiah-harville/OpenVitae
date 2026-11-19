@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Button, Card } from '@sivir-ui/svelte';
-  import { api } from '$lib/client';
+  import { api } from '#lib/client.ts';
   let { reload, report }: { reload: () => Promise<void>; report: (message: string, error?: boolean) => void } = $props();
   let busy = $state(false);
   async function download() { busy = true; try { const url = URL.createObjectURL(await api.downloadBackup()); const link = document.createElement('a'); link.href = url; link.download = `openvitae-backup-${new Date().toISOString().slice(0, 10)}.zip`; link.click(); URL.revokeObjectURL(url); report('Backup downloaded'); } catch (error) { report(String(error), true); } finally { busy = false; } }

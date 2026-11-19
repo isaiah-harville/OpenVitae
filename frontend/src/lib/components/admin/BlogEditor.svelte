@@ -1,9 +1,9 @@
 <script lang="ts">
   import { Button, Card } from '@sivir-ui/svelte';
   import { ArrowUpRight, Plus, Trash2 } from 'lucide-svelte';
-  import type { BlogPost, SiteConfig } from '$lib/api';
-  import { api } from '$lib/client';
-  import { markdown } from '$lib/markdown';
+  import type { BlogPost, SiteConfig } from '#lib/api.ts';
+  import { api } from '#lib/client.ts';
+  import { markdown } from '#lib/markdown.ts';
 
   let { config, posts, updated, reload, report }: {
     config: SiteConfig;

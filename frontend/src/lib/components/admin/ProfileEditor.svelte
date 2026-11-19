@@ -2,8 +2,8 @@
   import { untrack } from 'svelte';
   import { Button, Card } from '@sivir-ui/svelte';
   import { Plus, Trash2 } from 'lucide-svelte';
-  import type { SiteConfig } from '$lib/api';
-  import { api } from '$lib/client';
+  import type { SiteConfig } from '#lib/api.ts';
+  import { api } from '#lib/client.ts';
   import Field from './Field.svelte';
   let { config, updated, report }: { config: SiteConfig; updated: (config: SiteConfig) => void; report: (message: string, error?: boolean) => void } = $props();
   let profile = $state(untrack(() => ({ ...config.profile, links: [...(config.profile.links || [])], socials: [...(config.profile.socials || [])], education: [...(config.profile.education || [])] })));

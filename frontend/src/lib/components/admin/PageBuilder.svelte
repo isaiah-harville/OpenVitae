@@ -3,9 +3,9 @@
   import { Button } from '@sivir-ui/svelte';
   import { GripVertical, Plus, ArrowUp, ArrowDown, Trash2, Eye } from 'lucide-svelte';
   import { dndzone, type DndEvent } from 'svelte-dnd-action';
-  import type { Project, Publication, SiteConfig, Skill, Talk } from '$lib/api';
-  import { api } from '$lib/client';
-  import { BLOCK_TYPES, createBlock, defaultPages, migratePages, moveBlock, pagePath, reservedSlug, type PageBlock, type PageDocument } from '$lib/pages';
+  import type { Project, Publication, SiteConfig, Skill, Talk } from '#lib/api.ts';
+  import { api } from '#lib/client.ts';
+  import { BLOCK_TYPES, createBlock, defaultPages, migratePages, moveBlock, pagePath, reservedSlug, type PageBlock, type PageDocument } from '#lib/pages.ts';
   import PageBlocks from '../public/PageBlocks.svelte';
   import BlockSettings from './BlockSettings.svelte';
 
