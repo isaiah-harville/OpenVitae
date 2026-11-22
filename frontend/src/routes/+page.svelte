@@ -6,6 +6,7 @@
   import PageBlocks from '#lib/components/public/PageBlocks.svelte';
   import ProjectCard from '#lib/components/public/ProjectCard.svelte';
   import ProfileLinks from '#lib/components/public/ProfileLinks.svelte';
+  import { profileLinks } from '#lib/profile-links.ts';
   import ProfileEducation from '#lib/components/public/ProfileEducation.svelte';
   import SectionTitle from '#lib/components/public/SectionTitle.svelte';
   import TagChip from '#lib/components/public/TagChip.svelte';
@@ -29,7 +30,7 @@
 {#if !config}
   <main class="site-shell py-32 text-center"><h1 class="site-heading">OpenVitae is almost ready.</h1><p class="site-copy mt-4">The API is unavailable. Start the backend, then <a href="/admin">configure your site</a>.</p></main>
 {:else if config.pages}
-  <PageBlocks page={migratePages(config.pages, Boolean(profile.links?.length)).pages[0]} {config} content={data}/>
+  <PageBlocks page={migratePages(config.pages, profileLinks(profile).length > 0).pages[0]} {config} content={data}/>
 {:else}
 <main>
   <div class="relative overflow-hidden border-b border-[var(--site-line)]">

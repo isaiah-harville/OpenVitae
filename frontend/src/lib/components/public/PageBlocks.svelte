@@ -6,6 +6,7 @@
   import { markdown } from '#lib/markdown.ts';
   import ProjectCard from './ProjectCard.svelte';
   import PublicationCard from './PublicationCard.svelte';
+  import { profileLinks } from '#lib/profile-links.ts';
   import ProfileLinks from './ProfileLinks.svelte';
   import ProfileEducation from './ProfileEducation.svelte';
   import SectionTitle from './SectionTitle.svelte';
@@ -17,6 +18,7 @@
     content: { projects: Project[]; publications: Publication[]; talks: Talk[]; skills: Skill[] };
   } = $props();
   const profile = $derived(config.profile);
+  const links = $derived(profileLinks(profile));
   function image(block: PageBlock) {
     return block.imageUrl || (block.imageKey ? `/api/uploads/page-image/${encodeURIComponent(block.imageKey.slice('page-images/'.length))}` : '');
   }
@@ -25,7 +27,7 @@
 <main class="site-shell py-12 md:py-20">
   <div class="grid gap-5 md:grid-cols-2 md:gap-7">
     {#each page.blocks as block (block.id)}
-      {#if (block.type !== 'education' || profile.education?.length) && (block.type !== 'links' || profile.links?.length) && (block.type !== 'publications' || content.publications.length)}
+      {#if (block.type !== 'education' || profile.education?.length) && (block.type !== 'links' || links.length) && (block.type !== 'publications' || content.publications.length)}
       <section id={block.id} class={block.width === 2 ? 'min-w-0 md:col-span-2' : 'min-w-0'}>
         {#if block.type === 'hero'}
           <div class="site-card grid gap-9 rounded-[2rem] p-8 md:grid-cols-[1fr_auto] md:items-center md:p-14">
@@ -37,7 +39,7 @@
             {#if config.features.headshot !== false}<div class="mx-auto grid size-44 place-items-center overflow-hidden rounded-full border border-[var(--site-line)] bg-[var(--site-paper)] md:size-56">{#if config.headshot_url}<img src={config.headshot_url} alt={profile.name || 'Portrait'} class="size-full object-cover"/>{:else}<span class="text-7xl font-black">{(profile.name || 'V').slice(0, 1)}</span>{/if}</div>{/if}
           </div>
         {:else if block.type === 'links'}
-          <ProfileLinks links={profile.links || []} heading={block.heading}/>
+          <ProfileLinks {links} heading={block.heading}/>
         {:else if block.type === 'education'}
           <ProfileEducation entries={profile.education || []} heading={block.heading}/>
         {:else if block.type === 'contact'}

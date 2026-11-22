@@ -5,6 +5,7 @@
   import { dndzone, type DndEvent } from 'svelte-dnd-action';
   import type { Project, Publication, SiteConfig, Skill, Talk } from '#lib/api.ts';
   import { api } from '#lib/client.ts';
+  import { profileLinks } from '#lib/profile-links.ts';
   import { BLOCK_TYPES, createBlock, defaultPages, migratePages, moveBlock, pagePath, reservedSlug, type PageBlock, type PageDocument } from '#lib/pages.ts';
   import PageBlocks from '../public/PageBlocks.svelte';
   import BlockSettings from './BlockSettings.svelte';
@@ -17,8 +18,8 @@
   } = $props();
   let document = $state<PageDocument>(untrack(() => migratePages(config.pages ?? defaultPages(config.features, {
     skills: content.skills.length, projects: content.projects.length, talks: content.talks.length,
-    hasBio: Boolean(config.profile.bio), hasContact: Boolean(config.profile.email), hasLinks: Boolean(config.profile.links?.length), hasEducation: Boolean(config.profile.education?.length),
-  }), Boolean(config.profile.links?.length))));
+    hasBio: Boolean(config.profile.bio), hasContact: Boolean(config.profile.email), hasLinks: profileLinks(config.profile).length > 0, hasEducation: Boolean(config.profile.education?.length),
+  }), profileLinks(config.profile).length > 0)));
   let selectedPageId = $state('home');
   let selectedBlockId = $state<string | null>(null);
   let preview = $state(false);
