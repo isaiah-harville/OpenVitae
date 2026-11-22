@@ -1,3 +1,4 @@
+import hmac
 from datetime import UTC, datetime, timedelta
 
 import bcrypt
@@ -85,11 +86,25 @@ def _user_from_jwt(token: str | None, db: Session) -> User:
     return user
 
 
+def _user_from_api_token(token: str | None, db: Session) -> User | None:
+    """Resolve the static automation token (API_TOKEN) to the first admin, if it matches."""
+    if not settings.api_token or not token:
+        return None
+    if not hmac.compare_digest(token.encode("utf-8"), settings.api_token.encode("utf-8")):
+        return None
+    user = db.query(User).filter(User.is_admin.is_(True)).order_by(User.id).first()
+    if user is None:
+        raise CREDENTIALS_EXCEPTION
+    return user
+
+
 def get_current_user(
     request: Request,
     token: str | None = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
 ) -> User:
+    if (user := _user_from_api_token(token, db)) is not None:
+        return user
     if settings.proxy_auth:
         return _user_from_proxy(request, db)
     return _user_from_jwt(token, db)

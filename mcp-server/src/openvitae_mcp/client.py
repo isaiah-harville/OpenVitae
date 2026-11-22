@@ -1,0 +1,148 @@
+"""Thin HTTP client for the OpenVitae API, configured from the environment."""
+
+from __future__ import annotations
+
+import json
+import mimetypes
+import os
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+import httpx
+
+IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+MAX_IMAGE_BYTES = 8 * 1024 * 1024
+
+
+class OpenVitaeError(RuntimeError):
+    """An API call failed; the message carries the status and the API's detail."""
+
+
+@dataclass
+class Settings:
+    """Connection settings. See the README for what each variable does."""
+
+    url: str
+    api_token: str | None = None
+    email: str | None = None
+    password: str | None = None
+    extra_headers: dict[str, str] = field(default_factory=dict)
+    timeout: float = 30.0
+
+    @classmethod
+    def from_env(cls) -> Settings:
+        url = os.environ.get("OPENVITAE_URL", "http://localhost:8000").rstrip("/")
+        raw_headers = os.environ.get("OPENVITAE_HEADERS", "").strip()
+        headers: dict[str, str] = {}
+        if raw_headers:
+            parsed = json.loads(raw_headers)
+            if not isinstance(parsed, dict):
+                raise ValueError("OPENVITAE_HEADERS must be a JSON object")
+            headers = {str(k): str(v) for k, v in parsed.items()}
+        return cls(
+            url=url,
+            api_token=os.environ.get("OPENVITAE_API_TOKEN") or None,
+            email=os.environ.get("OPENVITAE_EMAIL") or None,
+            password=os.environ.get("OPENVITAE_PASSWORD") or None,
+            extra_headers=headers,
+        )
+
+
+class OpenVitaeClient:
+    """Calls the OpenVitae REST API. Every path is relative to `/api`."""
+
+    def __init__(self, settings: Settings, transport: httpx.BaseTransport | None = None):
+        self.settings = settings
+        self._http = httpx.Client(
+            base_url=f"{settings.url}/api",
+            headers=settings.extra_headers,
+            timeout=settings.timeout,
+            transport=transport,
+            follow_redirects=False,
+        )
+        self._bearer: str | None = settings.api_token
+
+    # ---- plumbing ----
+    def _auth_headers(self) -> dict[str, str]:
+        if self._bearer is None and self.settings.email and self.settings.password:
+            self._bearer = self._login()
+        return {"Authorization": f"Bearer {self._bearer}"} if self._bearer else {}
+
+    def _login(self) -> str:
+        # OAuth2 password flow: form fields, with the email as the username.
+        response = self._http.post(
+            "/auth/login",
+            data={"username": self.settings.email, "password": self.settings.password},
+        )
+        _raise_for(response)
+        return response.json()["access_token"]
+
+    def request(self, method: str, path: str, **kwargs: Any) -> Any:
+        headers = {**kwargs.pop("headers", {}), **self._auth_headers()}
+        response = self._http.request(method, path, headers=headers, **kwargs)
+        _raise_for(response)
+        if response.status_code == 204 or not response.content:
+            return None
+        return response.json()
+
+    def get(self, path: str, **kwargs: Any) -> Any:
+        return self.request("GET", path, **kwargs)
+
+    def post(self, path: str, **kwargs: Any) -> Any:
+        return self.request("POST", path, **kwargs)
+
+    def put(self, path: str, **kwargs: Any) -> Any:
+        return self.request("PUT", path, **kwargs)
+
+    def delete(self, path: str, **kwargs: Any) -> Any:
+        return self.request("DELETE", path, **kwargs)
+
+    # ---- files ----
+    def load_image(self, source: str) -> tuple[str, bytes, str]:
+        """Read an image from a local path or an http(s) URL as (filename, bytes, type)."""
+        if source.startswith(("http://", "https://")):
+            with httpx.Client(timeout=self.settings.timeout, follow_redirects=True) as http:
+                response = http.get(source)
+            _raise_for(response)
+            content = response.content
+            content_type = response.headers.get("content-type", "").split(";")[0].strip()
+            name = Path(httpx.URL(source).path).name or "image"
+        else:
+            path = Path(source).expanduser()
+            if not path.is_file():
+                raise OpenVitaeError(f"No such file: {path}")
+            content = path.read_bytes()
+            content_type = mimetypes.guess_type(path.name)[0] or ""
+            name = path.name
+        if content_type not in IMAGE_TYPES:
+            guessed = mimetypes.guess_type(name)[0] or ""
+            content_type = guessed if guessed in IMAGE_TYPES else content_type
+        if content_type not in IMAGE_TYPES:
+            raise OpenVitaeError(
+                f"{source} is {content_type or 'an unknown type'}; use jpeg, png, webp, or gif"
+            )
+        if len(content) > MAX_IMAGE_BYTES:
+            raise OpenVitaeError(f"{source} is larger than 8 MB")
+        return name, content, content_type
+
+    def upload_image(self, path: str, source: str) -> Any:
+        name, content, content_type = self.load_image(source)
+        return self.post(path, files={"file": (name, content, content_type)})
+
+
+def _raise_for(response: httpx.Response) -> None:
+    if response.is_success:
+        return
+    if response.is_redirect:
+        location = response.headers.get("location", "")
+        raise OpenVitaeError(
+            f"HTTP {response.status_code} redirect to {location}. An auth proxy is probably "
+            "in front of the API; point OPENVITAE_URL at the API directly or pass the "
+            "headers it needs with OPENVITAE_HEADERS."
+        )
+    try:
+        detail = response.json().get("detail", response.text)
+    except ValueError:
+        detail = response.text
+    raise OpenVitaeError(f"HTTP {response.status_code} {response.request.url}: {detail}")

@@ -32,6 +32,11 @@ class Settings(BaseSettings):
     # Auto-create a local admin row the first time a proxy-authenticated user appears.
     proxy_auth_auto_provision: bool = True
 
+    # Optional static admin API token for automation (e.g. the OpenVitae MCP server).
+    # Sent as "Authorization: Bearer <token>"; accepted in both jwt and proxy mode.
+    # Empty disables it.
+    api_token: str = ""
+
     @property
     def proxy_auth(self) -> bool:
         return self.auth_mode.lower() == "proxy"
