@@ -59,7 +59,7 @@
     <span>© {new Date().getFullYear()} {name}</span>
     <div class="flex items-center gap-6">
       <span class="hidden sm:inline">Built with OpenVitae</span>
-      <a class="inline-flex items-center gap-1 rounded-full border border-[var(--site-line)] px-3 py-1.5 font-semibold hover:border-[var(--site-accent)] hover:text-[var(--site-accent)]" href="/admin">Admin <ArrowUpRight size={14}/></a>
+      {#if !page.url.pathname.startsWith('/admin')}<a class="inline-flex items-center gap-1 rounded-full border border-[var(--site-line)] px-3 py-1.5 font-semibold hover:border-[var(--site-accent)] hover:text-[var(--site-accent)]" href="/admin">Admin <ArrowUpRight size={14}/></a>{/if}
     </div>
   </div>
 </footer>

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import { Button, Card } from '@sivir-ui/svelte';
+  import { UserRound } from 'lucide-svelte';
   import Cropper from 'svelte-easy-crop';
   import type { CropArea } from 'svelte-easy-crop';
   import type { SiteConfig } from '#lib/api.ts';
@@ -16,6 +17,8 @@
   let zoom = $state(1);
   let area = $state<CropArea | null>(null);
   let busy = $state(false);
+  let broken = $state(false);
+  $effect(() => { config.headshot_url; broken = false; });
 
   function clear() {
     if (image) URL.revokeObjectURL(image);
@@ -57,15 +60,15 @@
 
 <Card.Root class="site-card !rounded-2xl !p-6">
   <p class="site-eyebrow mb-2">First impression</p>
-  <h2 class="mb-5 text-xl font-bold">Headshot</h2>
+  <h2 class="mb-5 text-2xl font-bold tracking-tight">Headshot</h2>
   {#if image}
     <div class="relative h-72 overflow-hidden rounded-2xl bg-black"><Cropper {image} bind:crop bind:zoom aspect={1} cropShape="round" oncropcomplete={({ pixels }) => area = pixels}/></div>
     <label class="mt-5 block"><span class="site-label">Zoom</span><input class="w-full accent-[var(--site-accent)]" type="range" min="1" max="3" step="0.01" bind:value={zoom}/></label>
     <div class="mt-5 flex gap-2"><Button onclick={save} loading={busy}>Save crop</Button><Button variant="quiet" onclick={clear}>Cancel</Button></div>
   {:else}
     <div class="flex flex-wrap items-center gap-5">
-      {#if config.headshot_url}<img src={config.headshot_url} alt="Current headshot" class="size-24 rounded-2xl object-cover"/>{/if}
-      <label class="block"><span class="site-label">Choose photo</span><input class="site-field max-w-xs" type="file" accept="image/*" disabled={busy} onchange={(event) => { const file = event.currentTarget.files?.[0]; if (file) choose(file); }}/></label>
+      {#if config.headshot_url && !broken}<img src={config.headshot_url} alt="Current headshot" class="size-24 rounded-2xl border border-[var(--site-line)] object-cover" onerror={() => broken = true}/>{:else}<div class="grid size-24 place-items-center rounded-2xl border border-dashed border-[var(--site-line)] text-[var(--site-muted)]"><UserRound size={28}/></div>{/if}
+      <label class="block min-w-0 flex-1"><span class="site-label">Choose a photo</span><input class="site-field max-w-sm" type="file" accept="image/*" disabled={busy} onchange={(event) => { const file = event.currentTarget.files?.[0]; if (file) choose(file); }}/><span class="site-copy mt-2 block text-xs">You can crop it before it is saved.</span></label>
     </div>
   {/if}
 </Card.Root>

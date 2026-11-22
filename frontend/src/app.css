@@ -50,6 +50,9 @@
   --site-accent: #f5f5f4;
   --site-on-accent: #171717;
 }
+html {
+  scrollbar-gutter: stable;
+}
 body {
   background: var(--site-paper);
   color: var(--site-ink);
@@ -116,17 +119,65 @@ a {
   background: var(--site-accent-soft);
   color: var(--site-accent);
 }
-.site-field {
-  width: 100%;
-  background: var(--site-surface);
-  border: 1px solid var(--site-line);
-  border-radius: 0.8rem;
-  padding: 0.7rem 0.9rem;
-  color: var(--site-ink);
-}
-.site-field:focus {
-  outline: 2px solid var(--site-accent);
-  outline-offset: 1px;
+@layer components {
+  /* Raw form controls styled to match Sivir's <Input> so every admin field has the same
+   height, type size, fill, and focus ring. */
+  .site-field {
+    display: block;
+    width: 100%;
+    min-height: var(--size-control-md, 2.25rem);
+    background: var(--color-field, var(--site-surface));
+    border: var(--border-size, 1px) solid var(--color-border, var(--site-line));
+    border-radius: var(--radius-lg, 0.625rem);
+    padding: 0 0.75rem;
+    color: var(--color-field-foreground, var(--site-ink));
+    font-size: var(--font-size-body, 14px);
+    transition:
+      border-color 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+  .site-field::placeholder {
+    color: var(--color-foreground-muted, var(--site-muted));
+  }
+  .site-field:focus-visible {
+    outline: none;
+    border-color: var(--color-primary, var(--site-accent));
+    box-shadow: var(--focus-ring, 0 0 0 3px var(--site-accent-soft));
+  }
+  .site-field:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+  textarea.site-field {
+    padding: 0.55rem 0.75rem;
+    line-height: 1.6;
+  }
+  select.site-field {
+    appearance: none;
+    padding-right: 2.25rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+    background-position: right 0.65rem center;
+    background-repeat: no-repeat;
+  }
+  input[type="file"].site-field {
+    padding: 0.25rem 0.75rem 0.25rem 0.25rem;
+    color: var(--site-muted);
+    cursor: pointer;
+  }
+  input[type="file"].site-field::file-selector-button {
+    margin-right: 0.75rem;
+    border: 0;
+    border-radius: calc(var(--radius-lg, 0.625rem) - 3px);
+    background: var(--color-secondary, var(--site-accent-soft));
+    color: var(--site-ink);
+    padding: 0.3rem 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  input[type="file"].site-field:hover::file-selector-button {
+    background: var(--site-accent-soft);
+  }
 }
 .site-label {
   display: block;
@@ -151,4 +202,27 @@ a {
   margin: 0.25rem;
   max-width: 100%;
   vertical-align: middle;
+}
+@layer components {
+  /* Small square icon buttons used across the admin (reorder, remove). */
+  .admin-icon {
+    display: inline-grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.5rem;
+    color: var(--site-muted);
+  }
+  .admin-icon:hover:not(:disabled) {
+    background: var(--site-accent-soft);
+    color: var(--site-ink);
+  }
+  .admin-icon:disabled {
+    opacity: 0.25;
+  }
+  .admin-icon.danger:hover:not(:disabled) {
+    background: color-mix(in srgb, #ef4444 14%, transparent);
+    color: #ef4444;
+  }
 }
