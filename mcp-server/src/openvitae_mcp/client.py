@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 import mimetypes
 import os
+import tempfile
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -13,6 +15,16 @@ import httpx
 
 IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 MAX_IMAGE_BYTES = 8 * 1024 * 1024
+TALK_TYPES = {
+    ".pdf": "application/pdf",
+    ".ppt": "application/vnd.ms-powerpoint",
+    ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    ".odp": "application/vnd.oasis.opendocument.presentation",
+    ".mp4": "video/mp4",
+    ".m4v": "video/mp4",
+    ".webm": "video/webm",
+    ".mov": "video/quicktime",
+}
 
 
 class OpenVitaeError(RuntimeError):
@@ -129,6 +141,47 @@ class OpenVitaeClient:
     def upload_image(self, path: str, source: str) -> Any:
         name, content, content_type = self.load_image(source)
         return self.post(path, files={"file": (name, content, content_type)})
+
+    # ---- talk attachments (direct-to-storage uploads) ----
+    @contextmanager
+    def _local_file(self, source: str):
+        """Yield (path, filename) for a local path, or for a URL streamed to a temp file."""
+        if not source.startswith(("http://", "https://")):
+            path = Path(source).expanduser()
+            if not path.is_file():
+                raise OpenVitaeError(f"No such file: {path}")
+            yield path, path.name
+            return
+        name = Path(httpx.URL(source).path).name or "attachment"
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / name
+            with httpx.stream("GET", source, follow_redirects=True, timeout=None) as response:
+                _raise_for(response)
+                with path.open("wb") as out:
+                    for chunk in response.iter_bytes(1024 * 1024):
+                        out.write(chunk)
+            yield path, name
+
+    def upload_talk_attachment(self, talk_id: int, kind: str, source: str) -> Any:
+        """Upload slides or a video for a talk straight to object storage, then attach it."""
+        with self._local_file(source) as (path, name):
+            content_type = TALK_TYPES.get(path.suffix.lower()) or mimetypes.guess_type(name)[0]
+            if not content_type:
+                raise OpenVitaeError(f"Cannot tell the file type of {name}")
+            size = path.stat().st_size
+            ticket = self.post(
+                f"/uploads/talks/{talk_id}/{kind}/upload-url",
+                json={"filename": name, "content_type": content_type, "size": size},
+            )
+            with path.open("rb") as body:
+                response = httpx.put(
+                    ticket["upload_url"],
+                    content=body,
+                    headers={**ticket["headers"], "Content-Length": str(size)},
+                    timeout=None,
+                )
+            _raise_for(response)
+            return self.post(f"/uploads/talks/{talk_id}/{kind}", json={"key": ticket["key"]})
 
 
 def _raise_for(response: httpx.Response) -> None:

@@ -129,8 +129,10 @@ class Talk(Base):
     event_date: Mapped[date | None] = mapped_column(Date, nullable=True, index=True)
     url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    # Object-storage key of an uploaded file (slides, etc.), if any.
+    # Object-storage key of uploaded slides (PDF or a presentation file), if any.
     file_key: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    # Object-storage key of an uploaded recording, if any.
+    video_key: Mapped[str | None] = mapped_column(String(512), nullable=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

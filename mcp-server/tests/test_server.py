@@ -110,3 +110,36 @@ async def test_tools_are_registered():
 @pytest.fixture
 def anyio_backend():
     return "asyncio"
+
+
+def test_talk_video_upload_streams_to_storage(api, tmp_path):
+    video = tmp_path / "keynote.mov"
+    video.write_bytes(b"\x00" * 2048)
+    ticket = api.post("/uploads/talks/4/video/upload-url").respond(
+        json={
+            "upload_url": "https://s3.test/openvitae/talk-videos/k.mov?sig=1",
+            "key": "talk-videos/k.mov",
+            "headers": {"Content-Type": "video/quicktime"},
+        }
+    )
+    put = api.route(method="PUT", host="s3.test", path="/openvitae/talk-videos/k.mov").respond(200)
+    done = api.post("/uploads/talks/4/video").respond(json={"id": 4, "video_url": "u"})
+
+    result = server.upload_talk_video(4, str(video))
+
+    assert result == {"id": 4, "video_url": "u"}
+    assert json.loads(ticket.calls.last.request.content) == {
+        "filename": "keynote.mov",
+        "content_type": "video/quicktime",
+        "size": 2048,
+    }
+    sent = put.calls.last.request
+    assert sent.headers["content-type"] == "video/quicktime"
+    assert sent.headers["content-length"] == "2048"
+    assert "authorization" not in sent.headers
+    assert json.loads(done.calls.last.request.content) == {"key": "talk-videos/k.mov"}
+
+
+def test_remove_talk_attachment_validates_kind(api):
+    with pytest.raises(ToolError, match="slides"):
+        server.remove_talk_attachment(4, "audio")

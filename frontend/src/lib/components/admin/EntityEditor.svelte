@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Button, Card } from '@sivir-ui/svelte';
-  import { ArrowDown, ArrowUp, ImagePlus, Paperclip, Plus, Trash2, X } from 'lucide-svelte';
-  import type { Project, Publication, Skill, Tag, Talk } from '#lib/api.ts';
+  import { ArrowDown, ArrowUp, FileText, ImagePlus, Paperclip, Plus, Trash2, Video, X } from 'lucide-svelte';
+  import type { Project, Publication, Skill, Tag, Talk, TalkAttachment } from '#lib/api.ts';
   import { api } from '#lib/client.ts';
   import Field from './Field.svelte';
 
@@ -11,7 +11,7 @@
   let { kind, items, tags = [], skills = [], reload, report }: { kind: Kind; items: Entity[]; tags?: Tag[]; skills?: Skill[]; reload: () => Promise<void>; report: (message: string, error?: boolean) => void } = $props();
   const definitions: Record<Kind, FieldDef[]> = {
     publications: [{ key: 'title', label: 'Title' }, { key: 'authors', label: 'Authors' }, { key: 'venue', label: 'Venue' }, { key: 'year', label: 'Year', type: 'number' }, { key: 'abstract', label: 'Abstract', multiline: true }, { key: 'doi', label: 'DOI' }, { key: 'url', label: 'URL' }],
-    talks: [{ key: 'title', label: 'Title' }, { key: 'event', label: 'Event' }, { key: 'event_date', label: 'Date', type: 'date' }, { key: 'location', label: 'Location' }, { key: 'url', label: 'Slides or video URL' }, { key: 'description', label: 'Description', multiline: true }],
+    talks: [{ key: 'title', label: 'Title' }, { key: 'event', label: 'Event' }, { key: 'event_date', label: 'Date', type: 'date' }, { key: 'location', label: 'Location' }, { key: 'url', label: 'Link (event page or hosted recording)' }, { key: 'description', label: 'Description', multiline: true }],
     projects: [{ key: 'name', label: 'Name' }, { key: 'description', label: 'Short description', multiline: true }, { key: 'content', label: 'Detail page (Markdown)', multiline: true, mono: true }, { key: 'url', label: 'Project URL' }, { key: 'source_url', label: 'Source URL' }],
     skills: [{ key: 'name', label: 'Name' }, { key: 'category', label: 'Category' }],
     tags: [{ key: 'name', label: 'Name' }]
@@ -82,8 +82,25 @@
   }
   async function upload(item: Entity, file: File) {
     if (kind === 'publications') await run(() => api.uploadPaper(item.id, file), 'PDF uploaded');
-    if (kind === 'talks') await run(() => api.uploadTalkFile(item.id, file), 'Slides uploaded');
     if (kind === 'projects') await run(() => api.uploadProjectScreenshot(item.id, file), 'Screenshot uploaded');
+  }
+  let progress = $state<Record<string, number>>({});
+  const TALK_ATTACHMENTS: { kind: TalkAttachment; label: string; accept: string; field: 'file_url' | 'video_url' }[] = [
+    { kind: 'slides', label: 'Slides', accept: '.pdf,.ppt,.pptx,.odp', field: 'file_url' },
+    { kind: 'video', label: 'Video', accept: 'video/mp4,video/webm,video/quicktime,.mp4,.m4v,.webm,.mov', field: 'video_url' }
+  ];
+  async function uploadAttachment(item: Entity, attachment: TalkAttachment, file: File) {
+    const slot = `${item.id}-${attachment}`;
+    progress = { ...progress, [slot]: 0 };
+    try {
+      await run(() => api.uploadTalkAttachment(item.id, attachment, file, (fraction) => { progress = { ...progress, [slot]: fraction }; }), attachment === 'video' ? 'Video uploaded' : 'Slides uploaded');
+    } finally {
+      const { [slot]: _done, ...rest } = progress; progress = rest;
+    }
+  }
+  async function removeAttachment(item: Entity, attachment: TalkAttachment) {
+    if (!confirm(`Remove this talk's ${attachment === 'video' ? 'video' : 'slides'}?`)) return;
+    await run(() => api.deleteTalkAttachment(item.id, attachment), attachment === 'video' ? 'Video removed' : 'Slides removed');
   }
   async function deleteScreenshot(item: Entity, index: number) {
     if (kind === 'projects') await run(() => api.deleteProjectScreenshot(item.id, index), 'Screenshot removed');
@@ -110,8 +127,27 @@
             {#each item.screenshot_urls as url, imageIndex}<div class="group relative shrink-0"><img src={url} alt={`Screenshot ${imageIndex + 1}`} class="h-20 w-32 rounded-lg border border-[var(--site-line)] object-cover object-top"/>{#if imageIndex === 0}<span class="absolute bottom-1 left-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold text-white">Cover</span>{/if}<button type="button" class="absolute right-1 top-1 grid size-6 place-items-center rounded-md bg-black/70 text-white opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100" aria-label={`Remove screenshot ${imageIndex + 1}`} onclick={() => deleteScreenshot(item, imageIndex)}><X size={13}/></button></div>{/each}
             <label class="grid h-20 w-32 shrink-0 cursor-pointer place-items-center rounded-lg border border-dashed border-[var(--site-line)] text-xs font-semibold text-[var(--site-muted)] hover:border-[var(--site-accent)] hover:text-[var(--site-ink)]"><span class="flex items-center gap-1"><ImagePlus size={14}/> Add screenshot</span><input class="sr-only" type="file" accept="image/*" disabled={busy} onchange={(event) => { const file = event.currentTarget.files?.[0]; event.currentTarget.value = ''; if (file) upload(item, file); }}/></label>
           </div>
-        {:else if kind === 'publications' || kind === 'talks'}
-          <label class="mt-2 inline-flex cursor-pointer items-center gap-1 text-xs font-semibold text-[var(--site-muted)] hover:text-[var(--site-ink)]"><Paperclip size={13}/> {'file_url' in item && item.file_url ? 'Replace' : 'Attach'} {kind === 'talks' ? 'slides' : 'PDF'}<input class="sr-only" type="file" accept={kind === 'talks' ? '.pdf,.ppt,.pptx,.odp' : '.pdf,application/pdf'} disabled={busy} onchange={(event) => { const file = event.currentTarget.files?.[0]; event.currentTarget.value = ''; if (file) upload(item, file); }}/></label>
+        {:else if kind === 'talks'}
+          <div class="mt-3 flex flex-wrap gap-2">
+            {#each TALK_ATTACHMENTS as attachment (attachment.kind)}
+              {@const url = (item as Talk)[attachment.field]}
+              {@const slot = progress[`${item.id}-${attachment.kind}`]}
+              <div class="inline-flex items-center gap-1 rounded-lg border border-[var(--site-line)] py-1 pl-2.5 pr-1 text-xs font-semibold" class:border-dashed={!url}>
+                {#if attachment.kind === 'video'}<Video size={13}/>{:else}<FileText size={13}/>{/if}
+                {#if slot !== undefined}
+                  <span class="px-1">{attachment.label}: uploading {Math.round(slot * 100)}%</span>
+                {:else if url}
+                  <a class="px-1 hover:text-[var(--site-accent)]" href={url} target="_blank" rel="noreferrer">{attachment.label} ↗</a>
+                  <label class="cursor-pointer rounded px-1.5 py-0.5 text-[var(--site-muted)] hover:bg-[var(--site-accent-soft)] hover:text-[var(--site-ink)]">Replace<input class="sr-only" type="file" accept={attachment.accept} disabled={busy} onchange={(event) => { const file = event.currentTarget.files?.[0]; event.currentTarget.value = ''; if (file) uploadAttachment(item, attachment.kind, file); }}/></label>
+                  <button type="button" class="admin-icon danger !size-6" aria-label={`Remove ${attachment.label.toLowerCase()}`} disabled={busy} onclick={() => removeAttachment(item, attachment.kind)}><X size={13}/></button>
+                {:else}
+                  <label class="cursor-pointer px-1 pr-1.5 text-[var(--site-muted)] hover:text-[var(--site-ink)]">Add {attachment.label.toLowerCase()}<input class="sr-only" type="file" accept={attachment.accept} disabled={busy} onchange={(event) => { const file = event.currentTarget.files?.[0]; event.currentTarget.value = ''; if (file) uploadAttachment(item, attachment.kind, file); }}/></label>
+                {/if}
+              </div>
+            {/each}
+          </div>
+        {:else if kind === 'publications'}
+          <label class="mt-2 inline-flex cursor-pointer items-center gap-1 text-xs font-semibold text-[var(--site-muted)] hover:text-[var(--site-ink)]"><Paperclip size={13}/> {'file_url' in item && item.file_url ? 'Replace' : 'Attach'} PDF<input class="sr-only" type="file" accept=".pdf,application/pdf" disabled={busy} onchange={(event) => { const file = event.currentTarget.files?.[0]; event.currentTarget.value = ''; if (file) upload(item, file); }}/></label>
         {/if}
       </div>
     {:else}<p class="site-copy py-8 text-sm">Nothing here yet. Add the first one.</p>{/each}

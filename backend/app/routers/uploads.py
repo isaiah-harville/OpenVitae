@@ -1,12 +1,24 @@
+import re
+from typing import Literal
+
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 
+from ..config import get_settings
 from ..database import get_db
 from ..models import Project, Publication, SiteConfig, Talk, User
+from ..schemas import TalkOut, TalkUploadComplete, TalkUploadRequest, TalkUploadTicket
 from ..security import get_current_user
-from ..storage import delete_object, presigned_url, upload_fileobj
+from ..storage import (
+    delete_object,
+    new_key,
+    object_size,
+    presigned_put,
+    presigned_url,
+    upload_fileobj,
+)
 
 router = APIRouter(prefix="/api/uploads", tags=["uploads"])
 
@@ -124,6 +136,107 @@ def upload_talk_file(
     talk.file_key = key
     db.commit()
     return {"file_url": presigned_url(key)}
+
+
+VIDEO_TYPES = {"video/mp4", "video/webm", "video/quicktime"}
+TalkAttachment = Literal["slides", "video"]
+
+
+def _attachment_rules(kind: TalkAttachment) -> tuple[str, set[str], int, str]:
+    """(storage prefix, allowed types, max bytes, Talk column) for a talk attachment."""
+    settings = get_settings()
+    if kind == "video":
+        return "talk-videos", VIDEO_TYPES, settings.talk_video_max_mb * 1024 * 1024, "video_key"
+    return "talks", SLIDE_TYPES, settings.talk_slides_max_mb * 1024 * 1024, "file_key"
+
+
+def _talk_out(talk: Talk) -> TalkOut:
+    out = TalkOut.model_validate(talk)
+    out.file_url = presigned_url(talk.file_key)
+    out.video_url = presigned_url(talk.video_key)
+    return out
+
+
+def _get_talk(db: Session, talk_id: int) -> Talk:
+    talk = db.get(Talk, talk_id)
+    if not talk:
+        raise HTTPException(status_code=404, detail="Talk not found")
+    return talk
+
+
+@router.post("/talks/{talk_id}/{kind}/upload-url", response_model=TalkUploadTicket)
+def talk_upload_url(
+    talk_id: int,
+    kind: TalkAttachment,
+    payload: TalkUploadRequest,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    """Step 1 of a direct upload: a one-time URL the browser PUTs the file to.
+
+    Slides and recordings can be far larger than a reverse proxy allows, so the file
+    goes straight to object storage. Finish with POST /talks/{talk_id}/{kind}.
+    """
+    _get_talk(db, talk_id)
+    prefix, types, max_bytes, _column = _attachment_rules(kind)
+    if payload.content_type not in types:
+        allowed = "MP4, WebM, or MOV" if kind == "video" else "a PDF or slide deck"
+        raise HTTPException(status_code=400, detail=f"Talk {kind} must be {allowed}")
+    if payload.size > max_bytes:
+        limit = max_bytes // (1024 * 1024)
+        raise HTTPException(status_code=400, detail=f"Talk {kind} must be under {limit} MB")
+    key = new_key(prefix, payload.filename)
+    return TalkUploadTicket(
+        upload_url=presigned_put(key, payload.content_type, payload.size),
+        key=key,
+        headers={"Content-Type": payload.content_type},
+    )
+
+
+@router.post("/talks/{talk_id}/{kind}", response_model=TalkOut)
+def complete_talk_upload(
+    talk_id: int,
+    kind: TalkAttachment,
+    payload: TalkUploadComplete,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    """Step 2 of a direct upload: attach the uploaded object to the talk."""
+    talk = _get_talk(db, talk_id)
+    prefix, _types, max_bytes, column = _attachment_rules(kind)
+    # Only keys minted by talk_upload_url for this kind may be attached.
+    if not re.fullmatch(rf"{prefix}/[0-9a-f]{{32}}\.[a-z0-9]{{1,10}}", payload.key):
+        raise HTTPException(status_code=400, detail="Not an upload key for this attachment")
+    size = object_size(payload.key)
+    if size is None:
+        raise HTTPException(status_code=400, detail="Upload not found; PUT the file first")
+    if size > max_bytes:
+        delete_object(payload.key)
+        raise HTTPException(status_code=400, detail=f"Talk {kind} is too large")
+    previous = getattr(talk, column)
+    setattr(talk, column, payload.key)
+    db.commit()
+    if previous and previous != payload.key:
+        delete_object(previous)
+    db.refresh(talk)
+    return _talk_out(talk)
+
+
+@router.delete("/talks/{talk_id}/{kind}", response_model=TalkOut)
+def delete_talk_attachment(
+    talk_id: int,
+    kind: TalkAttachment,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    talk = _get_talk(db, talk_id)
+    _prefix, _types, _max, column = _attachment_rules(kind)
+    if key := getattr(talk, column):
+        setattr(talk, column, None)
+        db.commit()
+        delete_object(key)
+        db.refresh(talk)
+    return _talk_out(talk)
 
 
 @router.post("/projects/{project_id}/screenshots")

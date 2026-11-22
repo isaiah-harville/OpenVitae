@@ -80,8 +80,12 @@ Claude Desktop or any client with a JSON config:
 | Projects | `list_projects`, `get_project`, `create_project`, `update_project`, `reorder_projects`, `delete_project`, `add_project_screenshot`, `remove_project_screenshot` |
 | Skills, tags | `list_skills`, `create_skill`, `update_skill`, `delete_skill`, `list_tags`, `create_tag`, `delete_tag` |
 | Publications | `list_publications`, `create_publication`, `update_publication`, `delete_publication`, `import_publication_by_doi`, `import_publications_bibtex` |
-| Talks | `list_talks`, `create_talk`, `update_talk`, `delete_talk` |
+| Talks | `list_talks`, `create_talk`, `update_talk`, `delete_talk`, `upload_talk_slides`, `upload_talk_video`, `remove_talk_attachment` |
 | Blog | `list_blog_posts`, `create_blog_post`, `update_blog_post`, `delete_blog_post` |
+
+Talk slides and videos stream straight to object storage through a signed URL, so the
+`S3_PUBLIC_ENDPOINT_URL` the backend signs with must be reachable from where the MCP
+server runs.
 
 The `update_profile`, `update_theme`, and `update_features` tools merge keys into
 what is saved; pass `replace: true` to overwrite the whole object. Screenshots and

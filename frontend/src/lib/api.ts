@@ -35,7 +35,10 @@ export type Talk = {
   description?: string | null;
   sort_order: number;
   file_url?: string | null;
+  video_url?: string | null;
 };
+
+export type TalkAttachment = "slides" | "video";
 
 export type Project = {
   id: number;

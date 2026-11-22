@@ -11,6 +11,7 @@
   import ProfileEducation from './ProfileEducation.svelte';
   import SectionTitle from './SectionTitle.svelte';
   import TagChip from './TagChip.svelte';
+  import TalkCard from './TalkCard.svelte';
 
   let { page, config, content }: {
     page: SitePage;
@@ -56,7 +57,7 @@
             {:else if block.type === 'skills'}<div class="flex flex-wrap gap-2">{#each content.skills as skill (skill.id)}<TagChip tag={skill}/>{:else}<p class="site-copy">No skills yet.</p>{/each}</div>
             {:else if block.type === 'publications'}<div class="grid gap-4">{#each content.publications.slice(0, 5) as publication (publication.id)}<PublicationCard {publication}/>{:else}<p class="site-copy">No publications yet.</p>{/each}</div>{#if content.publications.length > 5}<a class="mt-6 inline-flex items-center gap-2 font-bold text-[var(--site-accent)]" href="/publications">View all publications <ArrowRight size={17}/></a>{/if}
             {:else if block.type === 'projects'}<div class={block.width === 2 ? 'grid gap-4 md:grid-cols-2' : 'grid gap-4'}>{#each content.projects as project (project.id)}<ProjectCard {project}/>{:else}<p class="site-copy">No projects yet.</p>{/each}</div>
-            {:else if block.type === 'talks'}<div class={block.width === 2 ? 'grid gap-4 md:grid-cols-2' : 'grid gap-4'}>{#each content.talks as talk (talk.id)}<article class="rounded-xl border border-[var(--site-line)] p-5"><p class="site-eyebrow mb-2">{[talk.event, talk.event_date].filter(Boolean).join(' · ')}</p><h3 class="text-xl font-bold">{talk.title}</h3>{#if talk.description}<p class="site-copy mt-3 text-sm">{talk.description}</p>{/if}{#if talk.url}<a href={talk.url} target="_blank" rel="noreferrer" class="mt-4 inline-block font-bold text-[var(--site-accent)]">Watch ↗</a>{/if}</article>{:else}<p class="site-copy">No talks yet.</p>{/each}</div>{/if}
+            {:else if block.type === 'talks'}<div class={block.width === 2 ? 'grid gap-4 md:grid-cols-2' : 'grid gap-4'}>{#each content.talks as talk (talk.id)}<TalkCard {talk} framed={false}/>{:else}<p class="site-copy">No talks yet.</p>{/each}</div>{/if}
           </div>
         {/if}
       </section>

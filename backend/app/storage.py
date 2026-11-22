@@ -59,6 +59,46 @@ def put_bytes(key: str, data: bytes, content_type: str) -> None:
     _client().put_object(Bucket=settings.s3_bucket, Key=key, Body=data, ContentType=content_type)
 
 
+def new_key(prefix: str, filename: str) -> str:
+    """A fresh, unguessable object key that keeps the file's extension."""
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else "bin"
+    ext = "".join(ch for ch in ext if ch.isalnum())[:10] or "bin"
+    return f"{prefix}/{uuid.uuid4().hex}.{ext}"
+
+
+def presigned_put(key: str, content_type: str, size: int) -> str:
+    """A browser-reachable URL that accepts exactly one PUT of this type and size."""
+    return _client(settings.s3_public_endpoint_url).generate_presigned_url(
+        "put_object",
+        Params={
+            "Bucket": settings.s3_bucket,
+            "Key": key,
+            "ContentType": content_type,
+            "ContentLength": size,
+        },
+        ExpiresIn=settings.presigned_url_expire_seconds,
+    )
+
+
+def object_size(key: str) -> int | None:
+    """Size in bytes of a stored object, or None if it does not exist."""
+    try:
+        return _client().head_object(Bucket=settings.s3_bucket, Key=key)["ContentLength"]
+    except ClientError:
+        return None
+
+
+def download_to(key: str, fileobj) -> str | None:
+    """Stream an object into a file object; return its content type, or None if missing."""
+    try:
+        obj = _client().get_object(Bucket=settings.s3_bucket, Key=key)
+    except ClientError:
+        return None
+    for chunk in obj["Body"].iter_chunks(1024 * 1024):
+        fileobj.write(chunk)
+    return obj.get("ContentType", "application/octet-stream")
+
+
 def presigned_url(key: str | None) -> str | None:
     """Generate a presigned GET URL using the browser-reachable endpoint."""
     if not key:

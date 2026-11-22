@@ -53,6 +53,10 @@ class Settings(BaseSettings):
     s3_bucket: str = "openvitae"
     s3_region: str = "us-east-1"
     presigned_url_expire_seconds: int = 60 * 60
+    # Talk attachments upload straight from the browser to object storage, so these
+    # limits are independent of any proxy body-size limit in front of the app.
+    talk_video_max_mb: int = 4096
+    talk_slides_max_mb: int = 200
 
     # CORS
     cors_origins: str = "http://localhost:3000"

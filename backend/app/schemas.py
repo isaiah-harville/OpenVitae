@@ -207,6 +207,26 @@ class TalkOut(TalkBase):
     model_config = ConfigDict(from_attributes=True)
     id: int
     file_url: str | None = None
+    video_url: str | None = None
+
+
+class TalkUploadRequest(BaseModel):
+    """Ask for a one-time URL to upload a talk's slides or video straight to storage."""
+
+    filename: str = Field(min_length=1, max_length=255)
+    content_type: str = Field(min_length=1, max_length=255)
+    size: int = Field(gt=0)
+
+
+class TalkUploadTicket(BaseModel):
+    upload_url: str
+    key: str
+    # Headers the PUT must send unchanged; they are part of the signature.
+    headers: dict[str, str]
+
+
+class TalkUploadComplete(BaseModel):
+    key: str = Field(min_length=1, max_length=512)
 
 
 # ---- Skills ----

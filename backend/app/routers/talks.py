@@ -13,6 +13,7 @@ router = APIRouter(prefix="/api/talks", tags=["talks"])
 def _to_out(talk: Talk) -> TalkOut:
     out = TalkOut.model_validate(talk)
     out.file_url = presigned_url(talk.file_key)
+    out.video_url = presigned_url(talk.video_key)
     return out
 
 
@@ -80,7 +81,8 @@ def delete_talk(
     talk = db.get(Talk, talk_id)
     if not talk:
         raise HTTPException(status_code=404, detail="Talk not found")
-    if talk.file_key:
-        delete_object(talk.file_key)
+    for key in (talk.file_key, talk.video_key):
+        if key:
+            delete_object(key)
     db.delete(talk)
     db.commit()

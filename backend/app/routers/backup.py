@@ -1,5 +1,6 @@
 import io
 import json
+import tempfile
 import zipfile
 from datetime import UTC, date, datetime
 
@@ -12,11 +13,20 @@ from ..database import get_db
 from ..models import BlogPost, Project, Publication, SiteConfig, Skill, Tag, Talk, User
 from ..page_schema import PageDocument
 from ..security import get_current_user
-from ..storage import download_bytes, put_bytes
+from ..storage import download_to, object_size, put_bytes
 
 router = APIRouter(prefix="/api", tags=["backup"])
 
 BACKUP_VERSION = 3
+
+
+def _chunks(fileobj, size: int = 1024 * 1024):
+    """Yield a file in fixed-size chunks, then close it."""
+    try:
+        while chunk := fileobj.read(size):
+            yield chunk
+    finally:
+        fileobj.close()
 
 
 def _iso(value):
@@ -41,6 +51,7 @@ def export_backup(db: Session = Depends(get_db), _: User = Depends(get_current_u
         asset_keys.append(config.headshot_key)
     asset_keys += [p.file_key for p in pubs if p.file_key]
     asset_keys += [t.file_key for t in talks if t.file_key]
+    asset_keys += [t.video_key for t in talks if t.video_key]
     for pr in projects:
         asset_keys += list(pr.screenshot_keys or [])
     if config and config.pages:
@@ -88,6 +99,7 @@ def export_backup(db: Session = Depends(get_db), _: User = Depends(get_current_u
                 "description": t.description,
                 "sort_order": t.sort_order,
                 "file_key": t.file_key,
+                "video_key": t.video_key,
             }
             for t in talks
         ],
@@ -131,21 +143,22 @@ def export_backup(db: Session = Depends(get_db), _: User = Depends(get_current_u
         "assets": [],
     }
 
-    buffer = io.BytesIO()
+    # Spool to disk past 64 MB: talk recordings can be far larger than memory allows.
+    buffer = tempfile.SpooledTemporaryFile(max_size=64 * 1024 * 1024)
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
         for key in dict.fromkeys(asset_keys):
-            fetched = download_bytes(key)
-            if fetched is None:
+            if object_size(key) is None:
                 continue
-            content, content_type = fetched
-            zf.writestr(f"assets/{key}", content)
-            data["assets"].append({"key": key, "content_type": content_type})
+            with zf.open(f"assets/{key}", "w", force_zip64=True) as entry:
+                content_type = download_to(key, entry)
+            if content_type is not None:
+                data["assets"].append({"key": key, "content_type": content_type})
         zf.writestr("data.json", json.dumps(data, indent=2))
 
     buffer.seek(0)
     stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
     return StreamingResponse(
-        buffer,
+        _chunks(buffer),
         media_type="application/zip",
         headers={"Content-Disposition": f'attachment; filename="openvitae-backup-{stamp}.zip"'},
     )

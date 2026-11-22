@@ -27,7 +27,7 @@ What renders publicly is the site config plus content collections:
   blocks:[...]}]}). Read it with get_site_config before changing it; the first page
   must be the homepage (id and slug "home").
 - Collections: projects (with screenshots, tags, skills), skills, tags,
-  publications, talks, blog posts.
+  publications, talks (with uploaded slides and video), blog posts.
 
 Guidance:
 - Read before writing. update_* config tools merge keys into the existing object;
@@ -358,6 +358,36 @@ def delete_talk(talk_id: int) -> str:
     """Delete a talk."""
     call("DELETE", f"/talks/{talk_id}")
     return f"Deleted talk {talk_id}"
+
+
+def _attach(talk_id: int, kind: str, source: str) -> dict:
+    try:
+        return client().upload_talk_attachment(talk_id, kind, source)
+    except OpenVitaeError as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool(annotations=WRITE)
+def upload_talk_slides(talk_id: int, source: str) -> dict:
+    """Attach slides (PDF, PPT/PPTX, or ODP) to a talk from a local path or an http(s)
+    URL, replacing any existing slides. Returns the updated talk."""
+    return _attach(talk_id, "slides", source)
+
+
+@mcp.tool(annotations=WRITE)
+def upload_talk_video(talk_id: int, source: str) -> dict:
+    """Attach a recording (MP4, WebM, or MOV) to a talk from a local path or an http(s)
+    URL, replacing any existing video. It plays inline on the public site. Large files
+    are fine: they stream straight to object storage."""
+    return _attach(talk_id, "video", source)
+
+
+@mcp.tool(annotations=DESTRUCTIVE)
+def remove_talk_attachment(talk_id: int, kind: str) -> dict:
+    """Remove a talk's "slides" or "video"."""
+    if kind not in {"slides", "video"}:
+        raise ToolError('kind must be "slides" or "video"')
+    return call("DELETE", f"/uploads/talks/{talk_id}/{kind}")
 
 
 # ---------------------------------------------------------------- blog
