@@ -1,9 +1,14 @@
 # OpenVitae Helm chart
 
 Deploys OpenVitae (FastAPI **api** + SvelteKit **frontend**) to Kubernetes, with an
-optional in-cluster **PostgreSQL** and **MinIO** that mirror the Docker Compose
-stack. Postgres and MinIO run as StatefulSets backed by PersistentVolumeClaims,
-so **their data survives pod restarts and `helm upgrade`.**
+optional in-cluster **PostgreSQL** and **S3 store** that mirror the Docker Compose
+stack. Both run as StatefulSets backed by PersistentVolumeClaims, so **their data
+survives pod restarts and `helm upgrade`.**
+
+The in-cluster S3 store is SeaweedFS. Its values still live under `minio.*` for
+compatibility with existing overrides. Releases before 1.1.0 ran MinIO, whose images
+are no longer published. Upgrading such a release starts with an empty store, so
+download a backup from **Admin → Data** first and restore it afterwards.
 
 ## Quick start
 
@@ -31,7 +36,7 @@ kubectl -n openvitae port-forward svc/openvitae-frontend 3000:3000
 
 ## Data persistence — what survives what
 
-| Action | Postgres / MinIO data |
+| Action | Postgres / S3 store data |
 | --- | --- |
 | Pod crash / reschedule | **Kept** (PVC reattaches) |
 | `kubectl rollout restart` / image update | **Kept** |
@@ -88,7 +93,7 @@ helm install openvitae ./helm/openvitae \
 
 Headshots and PDFs are served via **presigned URLs the browser opens directly**,
 so the object-storage endpoint must be reachable from clients — not just from
-inside the cluster. Set `publicS3Url`, or give MinIO its own ingress host:
+inside the cluster. Set `publicS3Url`, or give the S3 store its own ingress host:
 
 ```sh
 helm install openvitae ./helm/openvitae \

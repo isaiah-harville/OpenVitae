@@ -1,4 +1,5 @@
 {{- if .Values.minio.enabled }}
+{{- /* In-cluster S3 store. Named "minio" for compatibility; it runs SeaweedFS. */}}
 apiVersion: v1
 kind: Service
 metadata:
@@ -13,9 +14,6 @@ spec:
     - name: s3
       port: 9000
       targetPort: s3
-    - name: console
-      port: 9001
-      targetPort: console
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -40,28 +38,32 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       containers:
-        - name: minio
+        # SeaweedFS in single-process "mini" mode, serving S3 on :9000. The values
+        # keep the `minio` name so existing overrides continue to apply.
+        - name: s3
           image: {{ .Values.minio.image | quote }}
-          args: ["server", "/data", "--console-address", ":9001"]
+          args:
+            - mini
+            - -dir=/data
+            - -s3.port=9000
+            - -bucket={{ .Values.minio.bucket }}
           env:
-            - name: MINIO_ROOT_USER
+            - name: AWS_ACCESS_KEY_ID
               value: {{ .Values.minio.auth.rootUser | quote }}
-            - name: MINIO_ROOT_PASSWORD
+            - name: AWS_SECRET_ACCESS_KEY
               value: {{ .Values.minio.auth.rootPassword | quote }}
           ports:
             - name: s3
               containerPort: 9000
-            - name: console
-              containerPort: 9001
           readinessProbe:
             httpGet:
-              path: /minio/health/ready
+              path: /healthz
               port: s3
             initialDelaySeconds: 5
             periodSeconds: 10
           livenessProbe:
             httpGet:
-              path: /minio/health/live
+              path: /healthz
               port: s3
             initialDelaySeconds: 15
             periodSeconds: 20

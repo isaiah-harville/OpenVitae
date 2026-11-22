@@ -7,7 +7,10 @@ Config-driven CV website + publication manager. A public, config-driven CV site 
 
 - **frontend/** — Next.js 15 (App Router, TS). Public site + `/admin`. Package manager: **bun**.
 - **backend/** — FastAPI (Python 3.12). Package manager: **uv**.
-- **db** — PostgreSQL 17. **minio** — S3-compatible object storage (headshots, paper PDFs).
+- **mcp-server/** — MCP server (Python, uv) that edits a site through the API with
+  `API_TOKEN`. Keep its tools in step with API changes.
+- **db** — PostgreSQL 17. **s3** — SeaweedFS, S3-compatible object storage (headshots, screenshots, PDFs).
+  MinIO images are gone from Docker Hub; don't switch back.
 - Orchestrated by **`compose.yml`** (note: `compose.yml`, not `docker-compose.yml`).
 - The public site is fully described by `SiteConfig` (profile, theme, feature flags) +
   publications + tags. The admin edits config; the frontend renders it.
@@ -26,7 +29,7 @@ Config-driven CV website + publication manager. A public, config-driven CV site 
   bcrypt 4.x on startup. Don't reintroduce passlib.
 - **Auth is isolated** behind `get_current_user` + the login endpoint so it can later be
   swapped for OIDC/Keycloak (issue #9). Keep that seam clean.
-- **Object storage has two endpoints:** `S3_ENDPOINT_URL` (backend ↔ minio, internal) and
+- **Object storage has two endpoints:** `S3_ENDPOINT_URL` (backend ↔ s3, internal) and
   `S3_PUBLIC_ENDPOINT_URL` (used to sign URLs the browser opens). Don't conflate them.
 - **Theme model:** `SiteConfig.theme = { palette, defaultMode, customPrimary? }`. Palette
   *colors* live in `frontend/app/globals.css` under `[data-palette="…"]` (+ `.dark[...]`
@@ -41,7 +44,7 @@ Config-driven CV website + publication manager. A public, config-driven CV site 
 ## Running
 
 See README for full instructions. Quick: `cp .env.example .env && docker compose up -d --build`.
-Frontend `:3000`, API `:8000` (`/docs`), MinIO console `:9001`. Reset all data:
+Frontend `:3000`, API `:8000` (`/docs`), S3 `:9000`. Reset all data:
 `docker compose down -v`.
 
 ## Workflow

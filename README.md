@@ -11,7 +11,7 @@ theme, manage your papers with tags, and toggle features — all from a `/admin`
 | `frontend` | SvelteKit 3, Sivir UI, Tailwind v4 | Public CV site + `/admin` dashboard |
 | `api`      | FastAPI (Python 3.12, uv)     | Auth, site config, publications/tags, file uploads |
 | `db`       | PostgreSQL 17                 | Relational data                                    |
-| `minio`    | MinIO (S3-compatible)         | Object storage for headshots & paper PDFs          |
+| `s3`       | SeaweedFS (S3-compatible)     | Object storage for headshots, screenshots & PDFs   |
 
 The public site is **config-driven**: a single `SiteConfig` record (profile, theme
 palette, feature flags) plus publications and tags fully describe what renders. The admin
@@ -20,7 +20,7 @@ edits that config; the frontend renders it.
 ```
 Browser ──> frontend (SvelteKit) ──SSR──> api (FastAPI) ──> Postgres
    │                                          │
-   └──── presigned URLs ──> MinIO <───────────┘
+   └──── presigned URLs ──> S3 store <────────┘
 ```
 
 ## Quick start (Docker)
@@ -35,7 +35,7 @@ docker compose up -d --build
 | http://localhost:3000            | Public CV site                |
 | http://localhost:3000/admin      | Admin dashboard (login)       |
 | http://localhost:8000/docs       | API docs (OpenAPI/Swagger)    |
-| http://localhost:9001            | MinIO console                 |
+| http://localhost:9000            | S3 API (presigned file links) |
 
 On first boot the API seeds an admin user and a default site config from your `.env`:
 
@@ -44,13 +44,19 @@ On first boot the API seeds an admin user and a default site config from your `.
 
 Reset everything (including the database and uploads): `docker compose down -v`.
 
+> **Upgrading from a MinIO-based install (before v1.1.0)?** MinIO no longer publishes
+> images, so object storage is now SeaweedFS on a new `s3data` volume. Download a backup
+> from **Admin → Data** before upgrading and restore it afterwards to bring your uploads
+> across. The old `miniodata` volume is left untouched.
+
 ## Configuration
 
 All config is via environment variables — see [.env.example](.env.example). Key ones:
 
 - `JWT_SECRET` — **set a long random string in production.**
+- `API_TOKEN` — optional admin token for automation such as the MCP server.
 - `ADMIN_EMAIL` / `ADMIN_PASSWORD` — seeded on first run only.
-- `S3_PUBLIC_ENDPOINT_URL` — the MinIO/S3 endpoint the *browser* can reach (used to sign
+- `S3_PUBLIC_ENDPOINT_URL` — the S3 endpoint the *browser* can reach (used to sign
   download URLs). Behind a real domain, set this to your public object-storage URL.
 - `SERVER_API_URL` — internal API origin used by SvelteKit at request time. Browser
   requests use the same-origin `/api/*` proxy.
@@ -70,6 +76,9 @@ All config is via environment variables — see [.env.example](.env.example). Ke
 - 🧩 Build the homepage and additional pages from draggable, responsive blocks in **Admin → Pages**. Edit headings, text, images, buttons, page URLs, and navigation visibility. Preview before saving. Existing sites keep their current homepage until a builder layout is published.
 - ✍️ Write draft and published Markdown posts in **Admin → Blog**. The built-in `/blog` listing and post pages appear when **Show blog on the public site** is enabled. Drafts stay private, and backups include posts.
 - 🎚️ Toggle legacy homepage sections and the hero portrait.
+- 🤖 Let an LLM edit the site: the [MCP server](mcp-server/README.md) exposes profile,
+  theme, pages, projects (with screenshots), publications, talks, and blog tools to
+  Claude or any other MCP client, authenticated with an `API_TOKEN`.
 
 ## Roadmap
 
@@ -80,7 +89,7 @@ database migrations (Alembic), pluggable OIDC/Keycloak auth, automated tests & C
 ## Kubernetes (Helm)
 
 A Helm chart lives in [`helm/openvitae`](helm/openvitae). It deploys the api and
-frontend plus an optional in-cluster Postgres and MinIO (StatefulSets with PVCs, so
+frontend plus an optional in-cluster Postgres and S3 store (SeaweedFS) (StatefulSets with PVCs, so
 data survives restarts and upgrades), with ingress and external-DB/S3 support.
 
 ```sh
@@ -100,7 +109,7 @@ URL gotcha, Longhorn notes, and data-persistence details.
 ```bash
 cd backend
 uv sync
-uv run uvicorn app.main:app --reload --port 8000   # needs Postgres + MinIO reachable
+uv run uvicorn app.main:app --reload --port 8000   # needs Postgres + S3 reachable
 ```
 
 **Frontend** (uses [bun](https://bun.sh/)):
@@ -111,8 +120,8 @@ bun install
 bun run dev
 ```
 
-You still need Postgres and MinIO running — the simplest path is
-`docker compose up -d db minio` and point the backend's `.env` at `localhost`.
+You still need Postgres and S3 storage running — the simplest path is
+`docker compose up -d db s3` and point the backend's `.env` at `localhost`.
 
 
 ## License

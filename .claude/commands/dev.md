@@ -10,7 +10,7 @@ Bring up the whole stack and confirm it works:
    - API: `curl -s --retry 20 --retry-connrefused --retry-delay 1 http://localhost:8000/api/health`
    - Frontend: `curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/` (expect 200)
 4. Report the URLs: site `http://localhost:3000`, admin `http://localhost:3000/admin`,
-   API docs `http://localhost:8000/docs`, MinIO console `http://localhost:9001`.
+   API docs `http://localhost:8000/docs`, S3 API `http://localhost:9000`.
 5. If the API container is restarting, show `docker compose logs api | tail -30`.
 
 Default admin login comes from `.env` (`ADMIN_EMAIL` / `ADMIN_PASSWORD`).

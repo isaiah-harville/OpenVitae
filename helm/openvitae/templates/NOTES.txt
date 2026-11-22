@@ -9,7 +9,7 @@ Components:
   - postgres   external ({{ .Values.externalDatabase.url | default "<unset>" }})
 {{- end }}
 {{- if .Values.minio.enabled }}
-  - minio      ({{ include "openvitae.minio.fullname" . }})  [persistent: {{ .Values.minio.persistence.enabled }}]
+  - s3 store   ({{ include "openvitae.minio.fullname" . }})  [persistent: {{ .Values.minio.persistence.enabled }}]
 {{- else }}
   - object storage: external S3 ({{ .Values.externalS3.endpointUrl | default "<unset>" }})
 {{- end }}
@@ -27,7 +27,7 @@ Access:
 {{- if and .Values.minio.enabled (not .Values.publicS3Url) (not .Values.ingress.s3Host) }}
 
 WARNING: publicS3Url is not set and no ingress.s3Host is configured. Presigned
-URLs for headshots/PDFs will use the in-cluster MinIO endpoint, which is NOT
+URLs for headshots/PDFs will use the in-cluster S3 endpoint, which is NOT
 reachable from a browser. Set `publicS3Url` (or `ingress.s3Host`) for uploads
 to display. See the chart README.
 {{- end }}

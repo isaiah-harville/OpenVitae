@@ -18,23 +18,28 @@ services:
     ports:
       - "5432:5432"
 
-  minio:
-    image: minio/minio:latest
+  s3:
+    # S3-compatible object storage for headshots, screenshots, and papers: SeaweedFS
+    # in single-process "mini" mode. (MinIO no longer publishes container images.)
+    image: chrislusf/seaweedfs:4.54
     restart: unless-stopped
-    command: server /data --console-address ":9001"
+    command: ["mini", "-dir=/data", "-s3.port=9000", "-bucket=${S3_BUCKET:-openvitae}"]
     environment:
-      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-openvitae}
-      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-openvitae-secret}
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY:-openvitae}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:-openvitae-secret}
     volumes:
-      - miniodata:/data
+      - s3data:/data
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:9000/healthz"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 20
     ports:
       - "9000:9000" # S3 API
-      - "9001:9001" # web console
+    networks:
+      default:
+        # Older .env files point S3_ENDPOINT_URL at http://minio:9000.
+        aliases: [minio]
 
   api:
     build: ./backend
@@ -42,12 +47,13 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      minio:
-        condition: service_started
+      s3:
+        condition: service_healthy
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://openvitae:openvitae@db:5432/openvitae}
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-1440}
+      API_TOKEN: ${API_TOKEN:-}
       AUTH_MODE: ${AUTH_MODE:-jwt}
       PROXY_AUTH_EMAIL_HEADER: ${PROXY_AUTH_EMAIL_HEADER:-Remote-Email}
       PROXY_AUTH_GROUPS_HEADER: ${PROXY_AUTH_GROUPS_HEADER:-Remote-Groups}
@@ -55,7 +61,7 @@ services:
       PROXY_AUTH_AUTO_PROVISION: ${PROXY_AUTH_AUTO_PROVISION:-true}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@openvitae.local}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-changeme}
-      S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-http://minio:9000}
+      S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-http://s3:9000}
       S3_PUBLIC_ENDPOINT_URL: ${S3_PUBLIC_ENDPOINT_URL:-http://localhost:9000}
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-openvitae}
       S3_SECRET_KEY: ${S3_SECRET_KEY:-openvitae-secret}
@@ -79,4 +85,4 @@ services:
 
 volumes:
   pgdata:
-  miniodata:
+  s3data:
