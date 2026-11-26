@@ -18,6 +18,8 @@ dependencies = [
     "alembic>=1.18.4",
     "bibtexparser>=1.4.4",
     "pyjwt>=2.15.1",
+    "pypdfium2>=5.15.2",
+    "pillow>=13.0.0",
 ]
 
 [dependency-groups]

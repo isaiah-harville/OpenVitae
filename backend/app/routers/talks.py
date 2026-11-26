@@ -1,20 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from ..database import get_db
 from ..models import Talk, User
 from ..schemas import ReorderRequest, TalkCreate, TalkOut, TalkUpdate
 from ..security import get_current_user
-from ..storage import delete_object, presigned_url
+from ..serialize import talk_out
+from ..storage import delete_object
 
 router = APIRouter(prefix="/api/talks", tags=["talks"])
-
-
-def _to_out(talk: Talk) -> TalkOut:
-    out = TalkOut.model_validate(talk)
-    out.file_url = presigned_url(talk.file_key)
-    out.video_url = presigned_url(talk.video_key)
-    return out
 
 
 @router.get("", response_model=list[TalkOut])
@@ -22,10 +16,11 @@ def list_talks(db: Session = Depends(get_db)):
     """Public: list talks, newest first within the admin's manual order."""
     talks = (
         db.query(Talk)
+        .options(selectinload(Talk.attachments))
         .order_by(Talk.sort_order, Talk.event_date.desc().nullslast(), Talk.id.desc())
         .all()
     )
-    return [_to_out(t) for t in talks]
+    return [talk_out(t) for t in talks]
 
 
 @router.post("", response_model=TalkOut, status_code=201)
@@ -38,7 +33,7 @@ def create_talk(
     db.add(talk)
     db.commit()
     db.refresh(talk)
-    return _to_out(talk)
+    return talk_out(talk)
 
 
 @router.put("/reorder", response_model=list[TalkOut])
@@ -52,7 +47,7 @@ def reorder_talks(
         if talk:
             talk.sort_order = index
     db.commit()
-    return [_to_out(t) for t in db.query(Talk).order_by(Talk.sort_order).all()]
+    return [talk_out(t) for t in db.query(Talk).order_by(Talk.sort_order).all()]
 
 
 @router.put("/{talk_id}", response_model=TalkOut)
@@ -69,7 +64,7 @@ def update_talk(
         setattr(talk, field, value)
     db.commit()
     db.refresh(talk)
-    return _to_out(talk)
+    return talk_out(talk)
 
 
 @router.delete("/{talk_id}", status_code=204)
@@ -81,8 +76,9 @@ def delete_talk(
     talk = db.get(Talk, talk_id)
     if not talk:
         raise HTTPException(status_code=404, detail="Talk not found")
-    for key in (talk.file_key, talk.video_key):
-        if key:
-            delete_object(key)
+    keys = [talk.file_key, talk.file_preview_key, talk.video_key]
+    keys += [key for attachment in talk.attachments for key in attachment.stored_keys()]
     db.delete(talk)
     db.commit()
+    for key in filter(None, keys):
+        delete_object(key)

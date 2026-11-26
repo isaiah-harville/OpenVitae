@@ -80,6 +80,18 @@ class BlogPostUpdate(BaseModel):
     published: bool | None = None
 
 
+class AttachmentOut(BaseModel):
+    """A downloadable file. url opens it in the browser; download_url saves it."""
+
+    id: int
+    filename: str
+    content_type: str
+    size: int
+    url: str
+    download_url: str
+    preview_url: str | None = None
+
+
 class BlogPostOut(BlogPostCreate):
     model_config = ConfigDict(from_attributes=True)
 
@@ -87,6 +99,7 @@ class BlogPostOut(BlogPostCreate):
     slug: str
     published_at: datetime | None = None
     created_at: datetime
+    attachments: list[AttachmentOut] = []
 
 
 class BlogPostSummary(BaseModel):
@@ -207,26 +220,32 @@ class TalkOut(TalkBase):
     model_config = ConfigDict(from_attributes=True)
     id: int
     file_url: str | None = None
+    file_preview_url: str | None = None
     video_url: str | None = None
+    attachments: list[AttachmentOut] = []
 
 
-class TalkUploadRequest(BaseModel):
-    """Ask for a one-time URL to upload a talk's slides or video straight to storage."""
+class UploadRequest(BaseModel):
+    """Ask for a one-time URL to upload a file straight to storage."""
 
     filename: str = Field(min_length=1, max_length=255)
     content_type: str = Field(min_length=1, max_length=255)
     size: int = Field(gt=0)
 
 
-class TalkUploadTicket(BaseModel):
+class UploadTicket(BaseModel):
     upload_url: str
     key: str
     # Headers the PUT must send unchanged; they are part of the signature.
     headers: dict[str, str]
 
 
-class TalkUploadComplete(BaseModel):
+class UploadComplete(BaseModel):
     key: str = Field(min_length=1, max_length=512)
+
+
+class AttachmentComplete(UploadComplete):
+    filename: str = Field(min_length=1, max_length=255)
 
 
 # ---- Skills ----

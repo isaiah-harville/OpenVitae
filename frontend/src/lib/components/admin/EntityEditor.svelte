@@ -1,9 +1,10 @@
 <script lang="ts">
   import { Button, Card } from '@sivir-ui/svelte';
-  import { ArrowDown, ArrowUp, FileText, ImagePlus, Paperclip, Plus, Trash2, Video, X } from 'lucide-svelte';
-  import type { Project, Publication, Skill, Tag, Talk, TalkAttachment } from '#lib/api.ts';
+  import { ArrowDown, ArrowUp, ImagePlus, Paperclip, Plus, Presentation, Trash2, Video, X } from 'lucide-svelte';
+  import type { Project, Publication, Skill, Tag, Talk } from '#lib/api.ts';
   import { api } from '#lib/client.ts';
   import Field from './Field.svelte';
+  import TalkMedia from './TalkMedia.svelte';
 
   type Entity = Publication | Talk | Project | Skill | Tag;
   type Kind = 'publications' | 'talks' | 'projects' | 'skills' | 'tags';
@@ -65,6 +66,13 @@
       skills: () => id ? api.updateSkill(id, body) : api.createSkill(body),
       tags: () => id ? api.updateTag(id, body) : api.createTag(form.name, color)
     }[kind];
+    if (kind === 'talks' && !id) {
+      busy = true;
+      try { const talk = await api.createTalk(body); await reload(); editing = talk.id; report('Talk saved. You can add slides and files now.'); }
+      catch (error) { report(String(error), true); }
+      finally { busy = false; }
+      return;
+    }
     await run(call, `${title.slice(0, -1)} saved`);
   }
   async function remove(id: number) {
@@ -84,24 +92,6 @@
     if (kind === 'publications') await run(() => api.uploadPaper(item.id, file), 'PDF uploaded');
     if (kind === 'projects') await run(() => api.uploadProjectScreenshot(item.id, file), 'Screenshot uploaded');
   }
-  let progress = $state<Record<string, number>>({});
-  const TALK_ATTACHMENTS: { kind: TalkAttachment; label: string; accept: string; field: 'file_url' | 'video_url' }[] = [
-    { kind: 'slides', label: 'Slides', accept: '.pdf,.ppt,.pptx,.odp', field: 'file_url' },
-    { kind: 'video', label: 'Video', accept: 'video/mp4,video/webm,video/quicktime,.mp4,.m4v,.webm,.mov', field: 'video_url' }
-  ];
-  async function uploadAttachment(item: Entity, attachment: TalkAttachment, file: File) {
-    const slot = `${item.id}-${attachment}`;
-    progress = { ...progress, [slot]: 0 };
-    try {
-      await run(() => api.uploadTalkAttachment(item.id, attachment, file, (fraction) => { progress = { ...progress, [slot]: fraction }; }), attachment === 'video' ? 'Video uploaded' : 'Slides uploaded');
-    } finally {
-      const { [slot]: _done, ...rest } = progress; progress = rest;
-    }
-  }
-  async function removeAttachment(item: Entity, attachment: TalkAttachment) {
-    if (!confirm(`Remove this talk's ${attachment === 'video' ? 'video' : 'slides'}?`)) return;
-    await run(() => api.deleteTalkAttachment(item.id, attachment), attachment === 'video' ? 'Video removed' : 'Slides removed');
-  }
   async function deleteScreenshot(item: Entity, index: number) {
     if (kind === 'projects') await run(() => api.deleteProjectScreenshot(item.id, index), 'Screenshot removed');
   }
@@ -112,6 +102,10 @@
   {#if kind === 'tags' || kind === 'skills'}<label class="mt-5 block"><span class="site-label">Color</span><span class="flex items-center gap-2"><input type="color" class="h-9 w-12 cursor-pointer rounded-lg border border-[var(--site-line)] bg-transparent p-1" bind:value={color}/><span class="font-mono text-sm text-[var(--site-muted)]">{color}</span></span></label>{/if}
   {#if kind === 'publications' || kind === 'projects'}<div class="mt-5"><span class="site-label">Tags</span><div class="flex flex-wrap gap-2">{#each tags as tag}<button type="button" class:chosen={tagIds.includes(tag.id)} class="rounded-full border border-[var(--site-line)] px-3 py-1 text-xs font-semibold" onclick={() => tagIds = selected(tagIds, tag.id)}>{tag.name}</button>{/each}</div></div>{/if}
   {#if kind === 'projects'}<div class="mt-5"><span class="site-label">Skills</span><div class="flex flex-wrap gap-2">{#each skills as skill}<button type="button" class:chosen={skillIds.includes(skill.id)} class="rounded-full border border-[var(--site-line)] px-3 py-1 text-xs font-semibold" onclick={() => skillIds = selected(skillIds, skill.id)}>{skill.name}</button>{/each}</div></div>{/if}
+  {#if kind === 'talks'}
+    {@const talk = items.find((item) => item.id === editing) as Talk | undefined}
+    {#if talk}<TalkMedia {talk} {reload} {report}/>{:else}<p class="site-copy mt-6 flex items-center gap-2 rounded-xl bg-[var(--site-accent-soft)] px-4 py-3 text-sm"><Presentation size={16}/> Save the talk first, then upload slides, a recording, and other files here.</p>{/if}
+  {/if}
   <div class="mt-8 flex justify-end gap-2 border-t border-[var(--site-line)] pt-5"><Button variant="quiet" onclick={() => editing = null}>Cancel</Button><Button onclick={save} loading={busy}>Save</Button></div>
 </Card.Root></div>
 {/if}
@@ -128,23 +122,11 @@
             <label class="grid h-20 w-32 shrink-0 cursor-pointer place-items-center rounded-lg border border-dashed border-[var(--site-line)] text-xs font-semibold text-[var(--site-muted)] hover:border-[var(--site-accent)] hover:text-[var(--site-ink)]"><span class="flex items-center gap-1"><ImagePlus size={14}/> Add screenshot</span><input class="sr-only" type="file" accept="image/*" disabled={busy} onchange={(event) => { const file = event.currentTarget.files?.[0]; event.currentTarget.value = ''; if (file) upload(item, file); }}/></label>
           </div>
         {:else if kind === 'talks'}
-          <div class="mt-3 flex flex-wrap gap-2">
-            {#each TALK_ATTACHMENTS as attachment (attachment.kind)}
-              {@const url = (item as Talk)[attachment.field]}
-              {@const slot = progress[`${item.id}-${attachment.kind}`]}
-              <div class="inline-flex items-center gap-1 rounded-lg border border-[var(--site-line)] py-1 pl-2.5 pr-1 text-xs font-semibold" class:border-dashed={!url}>
-                {#if attachment.kind === 'video'}<Video size={13}/>{:else}<FileText size={13}/>{/if}
-                {#if slot !== undefined}
-                  <span class="px-1">{attachment.label}: uploading {Math.round(slot * 100)}%</span>
-                {:else if url}
-                  <a class="px-1 hover:text-[var(--site-accent)]" href={url} target="_blank" rel="noreferrer">{attachment.label} ↗</a>
-                  <label class="cursor-pointer rounded px-1.5 py-0.5 text-[var(--site-muted)] hover:bg-[var(--site-accent-soft)] hover:text-[var(--site-ink)]">Replace<input class="sr-only" type="file" accept={attachment.accept} disabled={busy} onchange={(event) => { const file = event.currentTarget.files?.[0]; event.currentTarget.value = ''; if (file) uploadAttachment(item, attachment.kind, file); }}/></label>
-                  <button type="button" class="admin-icon danger !size-6" aria-label={`Remove ${attachment.label.toLowerCase()}`} disabled={busy} onclick={() => removeAttachment(item, attachment.kind)}><X size={13}/></button>
-                {:else}
-                  <label class="cursor-pointer px-1 pr-1.5 text-[var(--site-muted)] hover:text-[var(--site-ink)]">Add {attachment.label.toLowerCase()}<input class="sr-only" type="file" accept={attachment.accept} disabled={busy} onchange={(event) => { const file = event.currentTarget.files?.[0]; event.currentTarget.value = ''; if (file) uploadAttachment(item, attachment.kind, file); }}/></label>
-                {/if}
-              </div>
-            {/each}
+          {@const talk = item as Talk}
+          {@const badges = [talk.file_url && { icon: Presentation, text: 'Slides' }, talk.video_url && { icon: Video, text: 'Recording' }, talk.attachments.length && { icon: Paperclip, text: `${talk.attachments.length} file${talk.attachments.length === 1 ? '' : 's'}` }].filter((badge) => !!badge)}
+          <div class="mt-2 flex flex-wrap items-center gap-1.5">
+            {#each badges as badge (badge.text)}<span class="inline-flex items-center gap-1 rounded-full bg-[var(--site-accent-soft)] px-2 py-0.5 text-[11px] font-semibold text-[var(--site-accent)]"><badge.icon size={12}/> {badge.text}</span>{/each}
+            <button type="button" class="text-xs font-semibold text-[var(--site-muted)] hover:text-[var(--site-ink)]" onclick={() => start(item)}>{badges.length ? 'Manage files' : '+ Add slides or files'}</button>
           </div>
         {:else if kind === 'publications'}
           <label class="mt-2 inline-flex cursor-pointer items-center gap-1 text-xs font-semibold text-[var(--site-muted)] hover:text-[var(--site-ink)]"><Paperclip size={13}/> {'file_url' in item && item.file_url ? 'Replace' : 'Attach'} PDF<input class="sr-only" type="file" accept=".pdf,application/pdf" disabled={busy} onchange={(event) => { const file = event.currentTarget.files?.[0]; event.currentTarget.value = ''; if (file) upload(item, file); }}/></label>

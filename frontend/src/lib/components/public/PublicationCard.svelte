@@ -2,8 +2,10 @@
   import { ArrowUpRight, FileText } from 'lucide-svelte';
   import { Card } from '@sivir-ui/svelte';
   import type { Publication } from '#lib/api.ts';
+  import FileViewer from './FileViewer.svelte';
   import TagChip from './TagChip.svelte';
   let { publication }: { publication: Publication } = $props();
+  let viewing = $state(false);
 </script>
 <Card.Root class="site-card !rounded-2xl !p-5 transition-all hover:-translate-y-0.5 sm:!p-7">
   <div class="flex items-start justify-between gap-4">
@@ -20,8 +22,9 @@
       <div class="flex flex-wrap gap-4 pt-1 text-sm font-semibold text-[var(--site-accent)]">
         {#if publication.url}<a class="inline-flex items-center gap-1" href={publication.url} target="_blank" rel="noreferrer">Read paper <ArrowUpRight size={15}/></a>{/if}
         {#if publication.doi}<a class="inline-flex items-center gap-1" href={`https://doi.org/${publication.doi}`} target="_blank" rel="noreferrer">DOI <ArrowUpRight size={15}/></a>{/if}
-        {#if publication.file_url}<a class="inline-flex items-center gap-1" href={publication.file_url} target="_blank" rel="noreferrer"><FileText size={15}/> PDF</a>{/if}
+        {#if publication.file_url}<button type="button" class="inline-flex items-center gap-1" onclick={() => viewing = true}><FileText size={15}/> PDF</button>{/if}
       </div>
     </div>
   </div>
 </Card.Root>
+{#if publication.file_url}<FileViewer file={{ url: publication.file_url, filename: `${publication.title}.pdf`, contentType: 'application/pdf' }} bind:open={viewing}/>{/if}

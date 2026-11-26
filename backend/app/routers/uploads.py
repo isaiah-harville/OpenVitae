@@ -8,13 +8,22 @@ from sqlalchemy.orm.attributes import flag_modified
 
 from ..config import get_settings
 from ..database import get_db
-from ..models import Project, Publication, SiteConfig, Talk, User
-from ..schemas import TalkOut, TalkUploadComplete, TalkUploadRequest, TalkUploadTicket
+from ..models import Attachment, BlogPost, Project, Publication, SiteConfig, Talk, User
+from ..previews import replace_preview
+from ..schemas import (
+    AttachmentComplete,
+    AttachmentOut,
+    TalkOut,
+    UploadComplete,
+    UploadRequest,
+    UploadTicket,
+)
 from ..security import get_current_user
+from ..serialize import attachment_out, talk_out
 from ..storage import (
     delete_object,
     new_key,
-    object_size,
+    object_head,
     presigned_put,
     presigned_url,
     upload_fileobj,
@@ -115,46 +124,80 @@ def upload_publication_file(
     return {"file_url": presigned_url(key)}
 
 
-@router.post("/talks/{talk_id}/file")
-def upload_talk_file(
-    talk_id: int,
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
-):
-    if file.content_type not in SLIDE_TYPES:
-        raise HTTPException(status_code=400, detail="Talk file must be a PDF or slide deck")
-
-    talk = db.get(Talk, talk_id)
-    if not talk:
-        raise HTTPException(status_code=404, detail="Talk not found")
-
-    if talk.file_key:
-        delete_object(talk.file_key)
-
-    key = upload_fileobj(file.file, file.content_type, "talks", file.filename or "slides.pdf")
-    talk.file_key = key
-    db.commit()
-    return {"file_url": presigned_url(key)}
-
-
 VIDEO_TYPES = {"video/mp4", "video/webm", "video/quicktime"}
+ATTACHMENT_TYPES = (
+    SLIDE_TYPES
+    | IMAGE_TYPES
+    | VIDEO_TYPES
+    | {
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.oasis.opendocument.text",
+        "application/vnd.oasis.opendocument.spreadsheet",
+        "application/epub+zip",
+        "application/zip",
+        "application/x-zip-compressed",
+        "application/gzip",
+        "text/plain",
+        "text/markdown",
+        "text/csv",
+        "audio/mpeg",
+        "audio/mp4",
+        "audio/wav",
+    }
+)
 TalkAttachment = Literal["slides", "video"]
+AttachmentOwner = Literal["talks", "blog-posts"]
+
+
+def _mb(value: int) -> int:
+    return value * 1024 * 1024
+
+
+def _ticket(
+    prefix: str, payload: UploadRequest, types: set[str], max_bytes: int, what: str, allowed: str
+):
+    """Step 1 of a direct upload: a one-time URL the browser PUTs the file to.
+
+    Files can be far larger than a reverse proxy allows, so they go straight to
+    object storage; the matching completion endpoint then attaches the stored key.
+    """
+    if payload.content_type not in types:
+        raise HTTPException(
+            status_code=400, detail=f"{what} must be {allowed}, not {payload.content_type}"
+        )
+    if payload.size > max_bytes:
+        limit = max_bytes // (1024 * 1024)
+        raise HTTPException(status_code=400, detail=f"{what} must be under {limit} MB")
+    key = new_key(prefix, payload.filename)
+    return UploadTicket(
+        upload_url=presigned_put(key, payload.content_type, payload.size),
+        key=key,
+        headers={"Content-Type": payload.content_type},
+    )
+
+
+def _claim(prefix: str, key: str, max_bytes: int, what: str) -> tuple[int, str]:
+    """Check that key was minted for prefix and has been uploaded; return (size, type)."""
+    if not re.fullmatch(rf"{prefix}/[0-9a-f]{{32}}\.[a-z0-9]{{1,10}}", key):
+        raise HTTPException(status_code=400, detail="Not an upload key for this file")
+    head = object_head(key)
+    if head is None:
+        raise HTTPException(status_code=400, detail="Upload not found; PUT the file first")
+    if head[0] > max_bytes:
+        delete_object(key)
+        raise HTTPException(status_code=400, detail=f"{what} is too large")
+    return head
 
 
 def _attachment_rules(kind: TalkAttachment) -> tuple[str, set[str], int, str]:
     """(storage prefix, allowed types, max bytes, Talk column) for a talk attachment."""
     settings = get_settings()
     if kind == "video":
-        return "talk-videos", VIDEO_TYPES, settings.talk_video_max_mb * 1024 * 1024, "video_key"
-    return "talks", SLIDE_TYPES, settings.talk_slides_max_mb * 1024 * 1024, "file_key"
-
-
-def _talk_out(talk: Talk) -> TalkOut:
-    out = TalkOut.model_validate(talk)
-    out.file_url = presigned_url(talk.file_key)
-    out.video_url = presigned_url(talk.video_key)
-    return out
+        return "talk-videos", VIDEO_TYPES, _mb(settings.talk_video_max_mb), "video_key"
+    return "talks", SLIDE_TYPES, _mb(settings.talk_slides_max_mb), "file_key"
 
 
 def _get_talk(db: Session, talk_id: int) -> Talk:
@@ -164,62 +207,42 @@ def _get_talk(db: Session, talk_id: int) -> Talk:
     return talk
 
 
-@router.post("/talks/{talk_id}/{kind}/upload-url", response_model=TalkUploadTicket)
+@router.post("/talks/{talk_id}/{kind}/upload-url", response_model=UploadTicket)
 def talk_upload_url(
     talk_id: int,
     kind: TalkAttachment,
-    payload: TalkUploadRequest,
+    payload: UploadRequest,
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
 ):
-    """Step 1 of a direct upload: a one-time URL the browser PUTs the file to.
-
-    Slides and recordings can be far larger than a reverse proxy allows, so the file
-    goes straight to object storage. Finish with POST /talks/{talk_id}/{kind}.
-    """
+    """Start uploading a talk's slides or video; finish with POST /talks/{talk_id}/{kind}."""
     _get_talk(db, talk_id)
     prefix, types, max_bytes, _column = _attachment_rules(kind)
-    if payload.content_type not in types:
-        allowed = "MP4, WebM, or MOV" if kind == "video" else "a PDF or slide deck"
-        raise HTTPException(status_code=400, detail=f"Talk {kind} must be {allowed}")
-    if payload.size > max_bytes:
-        limit = max_bytes // (1024 * 1024)
-        raise HTTPException(status_code=400, detail=f"Talk {kind} must be under {limit} MB")
-    key = new_key(prefix, payload.filename)
-    return TalkUploadTicket(
-        upload_url=presigned_put(key, payload.content_type, payload.size),
-        key=key,
-        headers={"Content-Type": payload.content_type},
-    )
+    allowed = "MP4, WebM, or MOV" if kind == "video" else "a PDF or slide deck"
+    return _ticket(prefix, payload, types, max_bytes, f"Talk {kind}", allowed)
 
 
 @router.post("/talks/{talk_id}/{kind}", response_model=TalkOut)
 def complete_talk_upload(
     talk_id: int,
     kind: TalkAttachment,
-    payload: TalkUploadComplete,
+    payload: UploadComplete,
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
 ):
-    """Step 2 of a direct upload: attach the uploaded object to the talk."""
+    """Attach an uploaded slide deck or video to the talk, replacing any previous one."""
     talk = _get_talk(db, talk_id)
     prefix, _types, max_bytes, column = _attachment_rules(kind)
-    # Only keys minted by talk_upload_url for this kind may be attached.
-    if not re.fullmatch(rf"{prefix}/[0-9a-f]{{32}}\.[a-z0-9]{{1,10}}", payload.key):
-        raise HTTPException(status_code=400, detail="Not an upload key for this attachment")
-    size = object_size(payload.key)
-    if size is None:
-        raise HTTPException(status_code=400, detail="Upload not found; PUT the file first")
-    if size > max_bytes:
-        delete_object(payload.key)
-        raise HTTPException(status_code=400, detail=f"Talk {kind} is too large")
+    _size, content_type = _claim(prefix, payload.key, max_bytes, f"Talk {kind}")
     previous = getattr(talk, column)
     setattr(talk, column, payload.key)
+    if kind == "slides":
+        talk.file_preview_key = replace_preview(talk.file_preview_key, payload.key, content_type)
     db.commit()
     if previous and previous != payload.key:
         delete_object(previous)
     db.refresh(talk)
-    return _talk_out(talk)
+    return talk_out(talk)
 
 
 @router.delete("/talks/{talk_id}/{kind}", response_model=TalkOut)
@@ -233,10 +256,82 @@ def delete_talk_attachment(
     _prefix, _types, _max, column = _attachment_rules(kind)
     if key := getattr(talk, column):
         setattr(talk, column, None)
+        if kind == "slides":
+            talk.file_preview_key = replace_preview(talk.file_preview_key, None, "")
         db.commit()
         delete_object(key)
         db.refresh(talk)
-    return _talk_out(talk)
+    return talk_out(talk)
+
+
+def _owner(db: Session, owner: AttachmentOwner, owner_id: int) -> dict[str, int]:
+    """The Attachment foreign key for an existing owner, e.g. {"talk_id": 7}."""
+    model, column = (Talk, "talk_id") if owner == "talks" else (BlogPost, "blog_post_id")
+    if not db.get(model, owner_id):
+        noun = "Talk" if owner == "talks" else "Blog post"
+        raise HTTPException(status_code=404, detail=f"{noun} not found")
+    return {column: owner_id}
+
+
+@router.post("/attachments/{owner}/{owner_id}/upload-url", response_model=UploadTicket)
+def attachment_upload_url(
+    owner: AttachmentOwner,
+    owner_id: int,
+    payload: UploadRequest,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    """Start uploading a file to a talk or blog post.
+
+    Finish by POSTing the returned key to /attachments/{owner}/{owner_id}.
+    """
+    _owner(db, owner, owner_id)
+    max_bytes = _mb(get_settings().attachment_max_mb)
+    allowed = "a document, slide deck, image, video, audio file, or archive"
+    return _ticket("attachments", payload, ATTACHMENT_TYPES, max_bytes, "An attachment", allowed)
+
+
+@router.post("/attachments/{owner}/{owner_id}", response_model=AttachmentOut, status_code=201)
+def complete_attachment_upload(
+    owner: AttachmentOwner,
+    owner_id: int,
+    payload: AttachmentComplete,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    foreign_key = _owner(db, owner, owner_id)
+    max_bytes = _mb(get_settings().attachment_max_mb)
+    size, content_type = _claim("attachments", payload.key, max_bytes, "The attachment")
+    count = db.query(Attachment).filter_by(**foreign_key).count()
+    attachment = Attachment(
+        **foreign_key,
+        key=payload.key,
+        filename=payload.filename.replace("/", "_").replace("\\", "_").strip(),
+        content_type=content_type,
+        size=size,
+        preview_key=replace_preview(None, payload.key, content_type),
+        sort_order=count,
+    )
+    db.add(attachment)
+    db.commit()
+    db.refresh(attachment)
+    return attachment_out(attachment)
+
+
+@router.delete("/attachments/{attachment_id}", status_code=204)
+def delete_attachment(
+    attachment_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    attachment = db.get(Attachment, attachment_id)
+    if not attachment:
+        raise HTTPException(status_code=404, detail="Attachment not found")
+    keys = attachment.stored_keys()
+    db.delete(attachment)
+    db.commit()
+    for key in keys:
+        delete_object(key)
 
 
 @router.post("/projects/{project_id}/screenshots")

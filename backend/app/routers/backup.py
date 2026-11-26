@@ -10,14 +10,14 @@ from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models import BlogPost, Project, Publication, SiteConfig, Skill, Tag, Talk, User
+from ..models import Attachment, BlogPost, Project, Publication, SiteConfig, Skill, Tag, Talk, User
 from ..page_schema import PageDocument
 from ..security import get_current_user
 from ..storage import download_to, object_size, put_bytes
 
 router = APIRouter(prefix="/api", tags=["backup"])
 
-BACKUP_VERSION = 3
+BACKUP_VERSION = 4
 
 
 def _chunks(fileobj, size: int = 1024 * 1024):
@@ -35,6 +35,21 @@ def _iso(value):
     return value
 
 
+def _attachment(attachment: Attachment) -> dict:
+    return {
+        "key": attachment.key,
+        "filename": attachment.filename,
+        "content_type": attachment.content_type,
+        "size": attachment.size,
+        "preview_key": attachment.preview_key,
+        "sort_order": attachment.sort_order,
+    }
+
+
+def _attachments(rows: list[dict]) -> list[Attachment]:
+    return [Attachment(**row) for row in rows]
+
+
 @router.get("/backup")
 def export_backup(db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     """Export the whole site as a self-contained .zip (data.json + assets/)."""
@@ -50,8 +65,9 @@ def export_backup(db: Session = Depends(get_db), _: User = Depends(get_current_u
     if config and config.headshot_key:
         asset_keys.append(config.headshot_key)
     asset_keys += [p.file_key for p in pubs if p.file_key]
-    asset_keys += [t.file_key for t in talks if t.file_key]
-    asset_keys += [t.video_key for t in talks if t.video_key]
+    asset_keys += [k for t in talks for k in (t.file_key, t.file_preview_key, t.video_key) if k]
+    for owner in (*talks, *blog_posts):
+        asset_keys += [k for a in owner.attachments for k in a.stored_keys()]
     for pr in projects:
         asset_keys += list(pr.screenshot_keys or [])
     if config and config.pages:
@@ -99,7 +115,9 @@ def export_backup(db: Session = Depends(get_db), _: User = Depends(get_current_u
                 "description": t.description,
                 "sort_order": t.sort_order,
                 "file_key": t.file_key,
+                "file_preview_key": t.file_preview_key,
                 "video_key": t.video_key,
+                "attachments": [_attachment(a) for a in t.attachments],
             }
             for t in talks
         ],
@@ -137,6 +155,7 @@ def export_backup(db: Session = Depends(get_db), _: User = Depends(get_current_u
                 "published": post.published,
                 "published_at": _iso(post.published_at),
                 "created_at": _iso(post.created_at),
+                "attachments": [_attachment(a) for a in post.attachments],
             }
             for post in blog_posts
         ],
@@ -178,7 +197,7 @@ async def restore_backup(
     except (zipfile.BadZipFile, KeyError, json.JSONDecodeError) as exc:
         raise HTTPException(status_code=400, detail="Invalid backup file") from exc
 
-    if data.get("version") not in (2, BACKUP_VERSION):
+    if data.get("version") not in (2, 3, BACKUP_VERSION):
         raise HTTPException(status_code=400, detail="Unsupported backup version")
 
     restored_pages = data.get("site_config", {}).get("pages")
@@ -232,7 +251,10 @@ async def restore_backup(
 
     for t in data.get("talks", []):
         ed = t.get("event_date")
-        db.add(Talk(**{**t, "event_date": date.fromisoformat(ed) if ed else None}))
+        attachments = _attachments(t.pop("attachments", []))
+        talk = Talk(**{**t, "event_date": date.fromisoformat(ed) if ed else None})
+        talk.attachments = attachments
+        db.add(talk)
 
     for pr in data.get("projects", []):
         tag_slugs = pr.pop("tag_slugs", [])
@@ -245,6 +267,7 @@ async def restore_backup(
     for post in data.get("blog_posts", []):
         db.add(
             BlogPost(
+                attachments=_attachments(post.get("attachments", [])),
                 slug=post["slug"],
                 title=post["title"],
                 excerpt=post.get("excerpt", ""),
