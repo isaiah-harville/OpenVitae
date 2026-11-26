@@ -1,6 +1,7 @@
 <script lang="ts">
   import { ArrowLeft } from 'lucide-svelte';
   import { blogDate } from '#lib/blog.ts';
+  import AttachmentList from '#lib/components/public/AttachmentList.svelte';
   import { markdown } from '#lib/markdown.ts';
   import type { PageData } from './$types';
   let { data }: { data: PageData } = $props();
@@ -13,5 +14,12 @@
   <h1 class="max-w-3xl text-5xl font-extrabold leading-[1.05] tracking-[-.065em] md:text-7xl">{post.title}</h1>
   {#if post.excerpt}<p class="site-copy mt-7 max-w-2xl text-xl">{post.excerpt}</p>{/if}
   <article class="prose prose-lg mt-12 max-w-none border-t border-[var(--site-line)] pt-10">{@html markdown(post.content)}</article>
+  {#if post.attachments.length}
+    <section class="mt-14 border-t border-[var(--site-line)] pt-10" aria-labelledby="post-files">
+      <p class="site-eyebrow mb-2">Downloads</p>
+      <h2 id="post-files" class="mb-6 text-2xl font-bold tracking-tight">Files for this post</h2>
+      <AttachmentList attachments={post.attachments}/>
+    </section>
+  {/if}
   <a href="/blog" class="mt-16 inline-flex items-center gap-2 border-t border-[var(--site-line)] pt-6 text-sm font-bold"><ArrowLeft size={16}/> Back to the blog</a>
 </main>

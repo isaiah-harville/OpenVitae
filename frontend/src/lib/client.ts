@@ -1,4 +1,6 @@
 import type {
+  Attachment,
+  AttachmentOwner,
   BlogPost,
   Project,
   Publication,
@@ -8,6 +10,7 @@ import type {
   Talk,
   TalkAttachment,
 } from "#lib/api.ts";
+import { fileType } from "#lib/files.ts";
 
 function token(): string | null {
   return typeof window !== "undefined" ? localStorage.getItem("ov_token") : null;
@@ -37,24 +40,6 @@ async function req<T>(path: string, init: RequestInit = {}, auth = true): Promis
   return res.status === 204 ? (undefined as T) : res.json();
 }
 
-const EXTENSION_TYPES: Record<string, string> = {
-  pdf: "application/pdf",
-  ppt: "application/vnd.ms-powerpoint",
-  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-  odp: "application/vnd.oasis.opendocument.presentation",
-  mp4: "video/mp4",
-  m4v: "video/mp4",
-  webm: "video/webm",
-  mov: "video/quicktime",
-};
-
-/** The browser's MIME type, or one guessed from the extension when it has none. */
-export function attachmentType(file: Pick<File, "name" | "type">): string {
-  if (file.type) return file.type;
-  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
-  return EXTENSION_TYPES[ext] ?? "application/octet-stream";
-}
-
 /** PUT a file to a signed storage URL, reporting upload progress (0–1). */
 function putFile(
   url: string,
@@ -77,6 +62,25 @@ function putFile(
       reject(new Error("Upload to storage failed: check that the S3 endpoint allows CORS PUTs"));
     xhr.send(file);
   });
+}
+
+/**
+ * Upload a file straight to object storage: get a signed PUT URL from ticketPath, upload,
+ * then POST the stored key to completePath. Files skip the API and any proxy body limit.
+ */
+async function directUpload<T>(
+  ticketPath: string,
+  completePath: string,
+  file: File,
+  onProgress?: (fraction: number) => void,
+): Promise<T> {
+  const ticket = await jsonReq<{
+    upload_url: string;
+    key: string;
+    headers: Record<string, string>;
+  }>(ticketPath, "POST", { filename: file.name, content_type: fileType(file), size: file.size });
+  await putFile(ticket.upload_url, file, ticket.headers, onProgress);
+  return jsonReq<T>(completePath, "POST", { key: ticket.key, filename: file.name });
 }
 
 function jsonReq<T>(path: string, method: string, body: unknown): Promise<T> {
@@ -171,28 +175,35 @@ export const api = {
       body: fd,
     });
   },
-  // Talk slides and recordings go straight to object storage (they can exceed any
-  // proxy body limit): get a signed PUT URL, upload, then attach the stored key.
-  async uploadTalkAttachment(
+  uploadTalkAttachment: (
     talkId: number,
     kind: TalkAttachment,
     file: File,
     onProgress?: (fraction: number) => void,
-  ): Promise<Talk> {
-    const ticket = await jsonReq<{
-      upload_url: string;
-      key: string;
-      headers: Record<string, string>;
-    }>(`/api/uploads/talks/${talkId}/${kind}/upload-url`, "POST", {
-      filename: file.name,
-      content_type: attachmentType(file),
-      size: file.size,
-    });
-    await putFile(ticket.upload_url, file, ticket.headers, onProgress);
-    return jsonReq<Talk>(`/api/uploads/talks/${talkId}/${kind}`, "POST", { key: ticket.key });
-  },
+  ) =>
+    directUpload<Talk>(
+      `/api/uploads/talks/${talkId}/${kind}/upload-url`,
+      `/api/uploads/talks/${talkId}/${kind}`,
+      file,
+      onProgress,
+    ),
   deleteTalkAttachment: (talkId: number, kind: TalkAttachment) =>
     req<Talk>(`/api/uploads/talks/${talkId}/${kind}`, { method: "DELETE" }),
+
+  attachFile: (
+    owner: AttachmentOwner,
+    ownerId: number,
+    file: File,
+    onProgress?: (fraction: number) => void,
+  ) =>
+    directUpload<Attachment>(
+      `/api/uploads/attachments/${owner}/${ownerId}/upload-url`,
+      `/api/uploads/attachments/${owner}/${ownerId}`,
+      file,
+      onProgress,
+    ),
+  removeAttachment: (id: number) =>
+    req<void>(`/api/uploads/attachments/${id}`, { method: "DELETE" }),
 
   // Backup downloads a zip; restore uploads one.
   async downloadBackup(): Promise<Blob> {

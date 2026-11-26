@@ -25,6 +25,18 @@ export type Publication = {
   file_url?: string | null;
 };
 
+export type Attachment = {
+  id: number;
+  filename: string;
+  content_type: string;
+  size: number;
+  url: string;
+  download_url: string;
+  preview_url?: string | null;
+};
+
+export type AttachmentOwner = "talks" | "blog-posts";
+
 export type Talk = {
   id: number;
   title: string;
@@ -35,7 +47,9 @@ export type Talk = {
   description?: string | null;
   sort_order: number;
   file_url?: string | null;
+  file_preview_url?: string | null;
   video_url?: string | null;
+  attachments: Attachment[];
 };
 
 export type TalkAttachment = "slides" | "video";
@@ -63,6 +77,7 @@ export type BlogPost = {
   published: boolean;
   published_at: string | null;
   created_at: string;
+  attachments: Attachment[];
 };
 
 export type BlogPostSummary = Pick<BlogPost, "id" | "slug" | "title" | "excerpt" | "published_at">;

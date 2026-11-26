@@ -1,9 +1,10 @@
 <script lang="ts">
   import { Button, Card } from '@sivir-ui/svelte';
-  import { ArrowUpRight, Plus, Trash2 } from 'lucide-svelte';
+  import { ArrowUpRight, Paperclip, Plus, Trash2 } from 'lucide-svelte';
   import type { BlogPost, SiteConfig } from '#lib/api.ts';
   import { api } from '#lib/client.ts';
   import { markdown } from '#lib/markdown.ts';
+  import AttachmentManager from './AttachmentManager.svelte';
 
   let { config, posts, updated, reload, report }: {
     config: SiteConfig;
@@ -19,6 +20,7 @@
   let published = $state(false);
   let preview = $state(false);
   let busy = $state(false);
+  const current = $derived(posts.find((post) => post.id === editing));
 
   function start(post?: BlogPost) {
     editing = post?.id ?? 0;
@@ -33,11 +35,17 @@
     busy = true;
     try {
       const body = { title: title.trim(), excerpt, content, published };
-      if (editing) await api.updateBlogPost(editing, body);
-      else await api.createBlogPost(body);
-      await reload();
-      editing = null;
-      report('Post saved');
+      if (editing) {
+        await api.updateBlogPost(editing, body);
+        await reload();
+        editing = null;
+        report('Post saved');
+      } else {
+        const post = await api.createBlogPost(body);
+        await reload();
+        editing = post.id;
+        report('Post saved. You can attach files now.');
+      }
     } catch (error) { report(String(error), true); }
     finally { busy = false; }
   }
@@ -77,7 +85,7 @@
         <div class="flex flex-wrap items-center justify-between gap-3 py-4">
           <div class="min-w-0">
             <p class="font-bold">{post.title}</p>
-            <p class="site-copy mt-1 text-xs">{post.published ? 'Published' : 'Draft'} · /blog/{post.slug}</p>
+            <p class="site-copy mt-1 flex items-center gap-1 text-xs">{post.published ? 'Published' : 'Draft'} · /blog/{post.slug}{#if post.attachments.length} · <Paperclip size={11}/> {post.attachments.length} file{post.attachments.length === 1 ? '' : 's'}{/if}</p>
           </div>
           <div class="flex items-center gap-2">
             {#if post.published && config.features.blog}<a href={`/blog/${post.slug}`} target="_blank" rel="noreferrer" class="rounded-lg p-2" aria-label={`View ${post.title}`}><ArrowUpRight size={16}/></a>{/if}
@@ -102,6 +110,15 @@
           <label class="flex items-center gap-3 text-sm font-semibold"><input type="checkbox" class="size-5 accent-[var(--site-accent)]" bind:checked={published}/> Publish this post</label>
         </div>
       {/if}
+      <section class="mt-7 border-t border-[var(--site-line)] pt-6" aria-labelledby="post-files">
+        <h4 id="post-files" class="text-base font-bold">Files</h4>
+        {#if current}
+          <p class="site-copy mb-3 text-sm">Shown under the post for readers to view and download. Uploads save right away.</p>
+          <AttachmentManager owner="blog-posts" ownerId={current.id} attachments={current.attachments} {reload} {report}/>
+        {:else}
+          <p class="site-copy mt-2 flex items-center gap-2 rounded-xl bg-[var(--site-accent-soft)] px-4 py-3 text-sm"><Paperclip size={16}/> Save the post first, then attach slides, PDFs, and other files here.</p>
+        {/if}
+      </section>
       <div class="mt-7 flex gap-2"><Button onclick={save} loading={busy}>Save post</Button><Button variant="quiet" onclick={() => editing = null}>Cancel</Button></div>
     </Card.Root>
   {/if}
