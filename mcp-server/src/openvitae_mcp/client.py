@@ -15,7 +15,7 @@ import httpx
 
 IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 MAX_IMAGE_BYTES = 8 * 1024 * 1024
-TALK_TYPES = {
+FILE_TYPES = {
     ".pdf": "application/pdf",
     ".ppt": "application/vnd.ms-powerpoint",
     ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
@@ -24,6 +24,26 @@ TALK_TYPES = {
     ".m4v": "video/mp4",
     ".webm": "video/webm",
     ".mov": "video/quicktime",
+    ".doc": "application/msword",
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ".xls": "application/vnd.ms-excel",
+    ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ".key": "application/vnd.apple.keynote",
+    ".txt": "text/plain",
+    ".md": "text/markdown",
+    ".csv": "text/csv",
+    ".json": "application/json",
+    ".ipynb": "application/x-ipynb+json",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif": "image/gif",
+    ".webp": "image/webp",
+    ".svg": "image/svg+xml",
+    ".zip": "application/zip",
+    ".gz": "application/gzip",
+    ".tgz": "application/gzip",
+    ".tar": "application/x-tar",
 }
 
 
@@ -162,26 +182,38 @@ class OpenVitaeClient:
                         out.write(chunk)
             yield path, name
 
+    def _put_to_storage(self, ticket_path: str, path: Path, name: str) -> str:
+        """Get a signed upload URL from the API, PUT the file to it, and return its key."""
+        content_type = FILE_TYPES.get(path.suffix.lower()) or mimetypes.guess_type(name)[0]
+        if not content_type:
+            raise OpenVitaeError(f"Cannot tell the file type of {name}")
+        size = path.stat().st_size
+        ticket = self.post(
+            ticket_path,
+            json={"filename": name, "content_type": content_type, "size": size},
+        )
+        with path.open("rb") as body:
+            response = httpx.put(
+                ticket["upload_url"],
+                content=body,
+                headers={**ticket["headers"], "Content-Length": str(size)},
+                timeout=None,
+            )
+        _raise_for(response)
+        return ticket["key"]
+
     def upload_talk_attachment(self, talk_id: int, kind: str, source: str) -> Any:
         """Upload slides or a video for a talk straight to object storage, then attach it."""
         with self._local_file(source) as (path, name):
-            content_type = TALK_TYPES.get(path.suffix.lower()) or mimetypes.guess_type(name)[0]
-            if not content_type:
-                raise OpenVitaeError(f"Cannot tell the file type of {name}")
-            size = path.stat().st_size
-            ticket = self.post(
-                f"/uploads/talks/{talk_id}/{kind}/upload-url",
-                json={"filename": name, "content_type": content_type, "size": size},
-            )
-            with path.open("rb") as body:
-                response = httpx.put(
-                    ticket["upload_url"],
-                    content=body,
-                    headers={**ticket["headers"], "Content-Length": str(size)},
-                    timeout=None,
-                )
-            _raise_for(response)
-            return self.post(f"/uploads/talks/{talk_id}/{kind}", json={"key": ticket["key"]})
+            key = self._put_to_storage(f"/uploads/talks/{talk_id}/{kind}/upload-url", path, name)
+            return self.post(f"/uploads/talks/{talk_id}/{kind}", json={"key": key})
+
+    def attach_file(self, owner: str, owner_id: int, source: str) -> Any:
+        """Upload a file straight to object storage and attach it to a talk or blog post."""
+        base = f"/uploads/attachments/{owner}/{owner_id}"
+        with self._local_file(source) as (path, name):
+            key = self._put_to_storage(f"{base}/upload-url", path, name)
+            return self.post(base, json={"key": key, "filename": name})
 
 
 def _raise_for(response: httpx.Response) -> None:

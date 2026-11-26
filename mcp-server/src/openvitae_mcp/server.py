@@ -390,6 +390,30 @@ def remove_talk_attachment(talk_id: int, kind: str) -> dict:
     return call("DELETE", f"/uploads/talks/{talk_id}/{kind}")
 
 
+ATTACHMENT_OWNERS = {"talks", "blog-posts"}
+
+
+@mcp.tool(annotations=WRITE)
+def attach_file(owner: str, owner_id: int, source: str) -> dict:
+    """Attach a file (handout, code archive, original deck, image, document) to a talk
+    or blog post from a local path or an http(s) URL. owner is "talks" or "blog-posts".
+    Adds to the existing attachments. Returns the attachment, including its id, which
+    remove_attachment takes."""
+    if owner not in ATTACHMENT_OWNERS:
+        raise ToolError('owner must be "talks" or "blog-posts"')
+    try:
+        return client().attach_file(owner, owner_id, source)
+    except OpenVitaeError as exc:
+        raise ToolError(str(exc)) from exc
+
+
+@mcp.tool(annotations=DESTRUCTIVE)
+def remove_attachment(attachment_id: int) -> str:
+    """Remove a file attached to a talk or blog post by its attachment id."""
+    call("DELETE", f"/uploads/attachments/{attachment_id}")
+    return f"Removed attachment {attachment_id}"
+
+
 # ---------------------------------------------------------------- blog
 BLOG_FIELDS = {"title", "excerpt", "content", "published"}
 

@@ -143,3 +143,44 @@ def test_talk_video_upload_streams_to_storage(api, tmp_path):
 def test_remove_talk_attachment_validates_kind(api):
     with pytest.raises(ToolError, match="slides"):
         server.remove_talk_attachment(4, "audio")
+
+
+def test_attach_file_uploads_to_storage_then_registers(api, tmp_path):
+    notes = tmp_path / "handout.docx"
+    notes.write_bytes(b"\x00" * 512)
+    ticket = api.post("/uploads/attachments/talks/4/upload-url").respond(
+        json={
+            "upload_url": "https://s3.test/openvitae/attachments/k.docx?sig=1",
+            "key": "attachments/k.docx",
+            "headers": {"Content-Type": "application/x"},
+        }
+    )
+    put = api.route(method="PUT", host="s3.test", path="/openvitae/attachments/k.docx").respond(200)
+    done = api.post("/uploads/attachments/talks/4").respond(
+        json={"id": 7, "filename": "handout.docx"}
+    )
+
+    result = server.attach_file("talks", 4, str(notes))
+
+    assert result == {"id": 7, "filename": "handout.docx"}
+    assert json.loads(ticket.calls.last.request.content) == {
+        "filename": "handout.docx",
+        "content_type": ("application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+        "size": 512,
+    }
+    assert put.calls.last.request.headers["content-length"] == "512"
+    assert json.loads(done.calls.last.request.content) == {
+        "key": "attachments/k.docx",
+        "filename": "handout.docx",
+    }
+
+
+def test_attach_file_validates_owner(api):
+    with pytest.raises(ToolError, match="blog-posts"):
+        server.attach_file("projects", 1, "x.zip")
+
+
+def test_remove_attachment_deletes_by_id(api):
+    route = api.delete("/uploads/attachments/7").respond(204)
+    assert server.remove_attachment(7) == "Removed attachment 7"
+    assert route.called
