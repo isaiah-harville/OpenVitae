@@ -3,12 +3,14 @@
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from ..database import get_db
 from ..models import BlogPost, SiteConfig, User
 from ..schemas import BlogPostCreate, BlogPostOut, BlogPostSummary, BlogPostUpdate
 from ..security import get_current_user
+from ..serialize import blog_post_out
+from ..storage import delete_object
 from ..utils import slugify, unique_slug
 
 router = APIRouter(prefix="/api/blog", tags=["blog"])
@@ -33,7 +35,13 @@ def list_public_posts(db: Session = Depends(get_db)):
 
 @router.get("/posts", response_model=list[BlogPostOut])
 def list_admin_posts(db: Session = Depends(get_db), _: User = Depends(get_current_user)):
-    return db.query(BlogPost).order_by(BlogPost.created_at.desc(), BlogPost.id.desc()).all()
+    posts = (
+        db.query(BlogPost)
+        .options(selectinload(BlogPost.attachments))
+        .order_by(BlogPost.created_at.desc(), BlogPost.id.desc())
+        .all()
+    )
+    return [blog_post_out(post) for post in posts]
 
 
 @router.post("/posts", response_model=BlogPostOut, status_code=201)
@@ -51,7 +59,7 @@ def create_post(
     db.add(post)
     db.commit()
     db.refresh(post)
-    return post
+    return blog_post_out(post)
 
 
 @router.put("/posts/{post_id}", response_model=BlogPostOut)
@@ -73,7 +81,7 @@ def update_post(
         post.published_at = datetime.now(UTC) if payload.published else None
     db.commit()
     db.refresh(post)
-    return post
+    return blog_post_out(post)
 
 
 @router.delete("/posts/{post_id}", status_code=204)
@@ -85,8 +93,11 @@ def delete_post(
     post = db.get(BlogPost, post_id)
     if not post:
         raise HTTPException(status_code=404, detail="Blog post not found")
+    keys = [key for attachment in post.attachments for key in attachment.stored_keys()]
     db.delete(post)
     db.commit()
+    for key in keys:
+        delete_object(key)
 
 
 @router.get("/{slug}", response_model=BlogPostOut)
@@ -96,4 +107,4 @@ def get_public_post(slug: str, db: Session = Depends(get_db)):
     post = db.query(BlogPost).filter(BlogPost.slug == slug, BlogPost.published.is_(True)).first()
     if not post:
         raise HTTPException(status_code=404, detail="Blog post not found")
-    return post
+    return blog_post_out(post)

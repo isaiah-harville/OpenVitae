@@ -1,4 +1,5 @@
 import uuid
+from urllib.parse import quote
 
 import boto3
 from botocore.client import Config
@@ -80,12 +81,19 @@ def presigned_put(key: str, content_type: str, size: int) -> str:
     )
 
 
-def object_size(key: str) -> int | None:
-    """Size in bytes of a stored object, or None if it does not exist."""
+def object_head(key: str) -> tuple[int, str] | None:
+    """(size in bytes, content type) of a stored object, or None if it does not exist."""
     try:
-        return _client().head_object(Bucket=settings.s3_bucket, Key=key)["ContentLength"]
+        head = _client().head_object(Bucket=settings.s3_bucket, Key=key)
     except ClientError:
         return None
+    return head["ContentLength"], head.get("ContentType", "application/octet-stream")
+
+
+def object_size(key: str) -> int | None:
+    """Size in bytes of a stored object, or None if it does not exist."""
+    head = object_head(key)
+    return head[0] if head else None
 
 
 def download_to(key: str, fileobj) -> str | None:
@@ -99,12 +107,18 @@ def download_to(key: str, fileobj) -> str | None:
     return obj.get("ContentType", "application/octet-stream")
 
 
-def presigned_url(key: str | None) -> str | None:
-    """Generate a presigned GET URL using the browser-reachable endpoint."""
+def presigned_url(key: str | None, download_as: str | None = None) -> str | None:
+    """Generate a presigned GET URL using the browser-reachable endpoint.
+
+    With download_as, the browser saves the file under that name instead of opening it.
+    """
     if not key:
         return None
+    params = {"Bucket": settings.s3_bucket, "Key": key}
+    if download_as:
+        params["ResponseContentDisposition"] = (
+            f"attachment; filename*=UTF-8''{quote(download_as, safe='')}"
+        )
     return _client(settings.s3_public_endpoint_url).generate_presigned_url(
-        "get_object",
-        Params={"Bucket": settings.s3_bucket, "Key": key},
-        ExpiresIn=settings.presigned_url_expire_seconds,
+        "get_object", Params=params, ExpiresIn=settings.presigned_url_expire_seconds
     )

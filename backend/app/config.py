@@ -57,6 +57,8 @@ class Settings(BaseSettings):
     # limits are independent of any proxy body-size limit in front of the app.
     talk_video_max_mb: int = 4096
     talk_slides_max_mb: int = 200
+    # Files attached to talks and blog posts (handouts, code, original decks).
+    attachment_max_mb: int = 500
 
     # CORS
     cors_origins: str = "http://localhost:3000"

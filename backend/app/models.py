@@ -1,7 +1,9 @@
 from datetime import date, datetime
 
 from sqlalchemy import (
+    BigInteger,
     Boolean,
+    CheckConstraint,
     Column,
     Date,
     DateTime,
@@ -131,10 +133,19 @@ class Talk(Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     # Object-storage key of uploaded slides (PDF or a presentation file), if any.
     file_key: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    # Rendered first page of PDF slides, shown as the talk's thumbnail.
+    file_preview_key: Mapped[str | None] = mapped_column(String(512), nullable=True)
     # Object-storage key of an uploaded recording, if any.
     video_key: Mapped[str | None] = mapped_column(String(512), nullable=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    attachments: Mapped[list["Attachment"]] = relationship(
+        back_populates="talk",
+        order_by="Attachment.sort_order, Attachment.id",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
 
 class Skill(Base):
@@ -184,3 +195,40 @@ class BlogPost(Base):
     published: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    attachments: Mapped[list["Attachment"]] = relationship(
+        back_populates="blog_post",
+        order_by="Attachment.sort_order, Attachment.id",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+
+class Attachment(Base):
+    """A downloadable file on a talk or a blog post. Exactly one owner is set."""
+
+    __tablename__ = "attachments"
+    __table_args__ = (
+        CheckConstraint("num_nonnulls(talk_id, blog_post_id) = 1", name="attachment_one_owner"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    talk_id: Mapped[int | None] = mapped_column(
+        ForeignKey("talks.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    blog_post_id: Mapped[int | None] = mapped_column(
+        ForeignKey("blog_posts.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    key: Mapped[str] = mapped_column(String(512), unique=True, nullable=False)
+    filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    content_type: Mapped[str] = mapped_column(String(255), nullable=False)
+    size: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    preview_key: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    talk: Mapped[Talk | None] = relationship(back_populates="attachments")
+    blog_post: Mapped[BlogPost | None] = relationship(back_populates="attachments")
+
+    def stored_keys(self) -> list[str]:
+        return [k for k in (self.key, self.preview_key) if k]
